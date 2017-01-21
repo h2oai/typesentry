@@ -110,6 +110,22 @@ class MagicType(object):
         """Return string representing the name of this type."""
         return "?"
 
+    def fuzzycheck(self, var):
+        """
+        Return a number from 0 to 1 indicating how closely ``var`` matches
+        this type.
+
+        This is similar to :meth:`check`, except that it may potentially be
+        more computationally intensive. The return value of 0 indicates that
+        ``var`` doesn't match this type at all, whereas 1 indicates a match.
+        Values less than 1 may indicate "partial" match, for example a
+        ``List[int]`` type may return the proportion of elements in the given
+        list ``var`` that are integers.
+
+        The default implementation of this function returns only 0 or 1.
+        """
+        return 1 if self.check(var) else 0
+
 
 class Any(MagicType):
     def check(self, v):
@@ -210,10 +226,18 @@ class ListChecker(MagicType):
         self._elem = checker_for_type(elem_type)
 
     def check(self, v):
-        return isinstance(v, list) and all(self._elem(x) for x in v)
+        c = self._elem
+        return isinstance(v, list) and all(c.check(x) for x in v)
 
     def name(self):
         return "List[%s]" % self._elem.name()
+
+    def fuzzycheck(self, v):
+        if not isinstance(v, list): return 0
+        if len(v) == 0: return 1
+        c = self._elem
+        return sum(c.fuzzycheck(x) for x in v) / len(v)
+
 
 
 class SetChecker(MagicType):
@@ -221,10 +245,18 @@ class SetChecker(MagicType):
         self._elem = checker_for_type(elem_type)
 
     def check(self, v):
-        return isinstance(v, set) and all(self._elem(x) for x in v)
+        c = self._elem
+        return isinstance(v, set) and all(c.check(x) for x in v)
 
     def name(self):
         return "Set[%s]" % self._elem.name()
+
+    def fuzzycheck(self, v):
+        if not isinstance(v, set): return 0
+        if len(v) == 0: return 1
+        c = self._elem
+        return sum(c.fuzzycheck(x) for x in v) / len(v)
+
 
 
 class TupleChecker(MagicType):
