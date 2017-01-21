@@ -19,6 +19,8 @@ class Signature(object):
         self.argnames = tuple(fspec.args)
         self.argindices = {name: i for i, name in enumerate(fspec.args)}
         self.num_self_args = 1 if fspec.args and fspec.args[0] == "self" else 0
+        self.retchecker = None
+        self.checkers = {}
 
         # Minimum number of arguments that must be supplied -- all the other
         # have defaults and can be omitted.
@@ -38,7 +40,10 @@ class Signature(object):
                 "_kwless cannot exceed the number of arguments"
             self.max_positional_args = kwless
 
-        self.checkers = {}
+        if "_return" in types:
+            rettype = types.pop("_return")
+            self.retchecker = checker_for_type(rettype)
+
         self._create_checkers(types)
 
 
