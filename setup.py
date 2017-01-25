@@ -31,7 +31,7 @@ setup(
     packages=packages,
 
     # Runtime dependencies
-    install_requires=[],
+    install_requires=["colorama"],
     tests_require=["pytest"],
 
     # This module doesn't expect to introspect its own source code.
