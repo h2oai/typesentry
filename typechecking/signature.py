@@ -34,8 +34,7 @@ class Signature(object):
             kwless = types.pop("_kwless")
             assert not self.vararg, "_kwless cannot be used with varargs"
             assert isinstance(kwless, int), "_kwless should be an int"
-            assert kwless >= self.num_self_args, \
-                "self cannot be a keyword argument"
+            kwless += self.num_self_args
             assert kwless < len(self.argnames), \
                 "_kwless cannot exceed the number of arguments"
             self.max_positional_args = kwless
