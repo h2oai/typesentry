@@ -47,33 +47,33 @@ def _create_checker_for_type(t):
         return LiteralChecker(t)
     if isinstance(t, MagicType):
         return t
-    if issubclass(t, MagicType):
-        return t()
-    if typing:
-        if t is typing.Any:
-            return Any()
-        if issubclass(t, typing.Union):
-            return U(*t.__union_params__)
-        if issubclass(t, typing.List):
-            itemtype = t.__args__[0]
-            if itemtype:
-                return ListChecker(itemtype)
-            else:
-                return ClassChecker(list)
-        if issubclass(t, typing.Dict):
-            if t.__args__:
-                key, value = t.__args__
-                return checker_for_type({key: value})
-            else:
-                return ClassChecker(dict)
-        if issubclass(t, typing.Tuple):
-            tlen = len(t.__tuple_params__)
-            if t.__tuple_use_ellipsis__:
-                assert tlen == 1
-                return TupleChecker(t.__tuple_params__[0], Ellipsis)
-            else:
-                return TupleChecker(*t.__tuple_params__)
     if isinstance(t, type):
+        if issubclass(t, MagicType):
+            return t()
+        if typing:
+            if t is typing.Any:
+                return Any()
+            if issubclass(t, typing.Union):
+                return U(*t.__union_params__)
+            if issubclass(t, typing.List):
+                itemtype = t.__args__[0]
+                if itemtype:
+                    return ListChecker(itemtype)
+                else:
+                    return ClassChecker(list)
+            if issubclass(t, typing.Dict):
+                if t.__args__:
+                    key, value = t.__args__
+                    return checker_for_type({key: value})
+                else:
+                    return ClassChecker(dict)
+            if issubclass(t, typing.Tuple):
+                tlen = len(t.__tuple_params__)
+                if t.__tuple_use_ellipsis__:
+                    assert tlen == 1
+                    return TupleChecker(t.__tuple_params__[0], Ellipsis)
+                else:
+                    return TupleChecker(*t.__tuple_params__)
         # `t` is a name of the class, or a built-in type such as
         # `list, `tuple`, etc
         return ClassChecker(t)
