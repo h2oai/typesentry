@@ -44,7 +44,8 @@ setup(
         "colorama>=0.3",
     ],
     tests_require=[
-        "pytest>=3.0"
+        "pytest>=3.0",
+        "pytest-cov",
     ],
 
     # This module doesn't expect to introspect its own source code.
