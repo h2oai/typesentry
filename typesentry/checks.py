@@ -55,19 +55,19 @@ def _create_checker_for_type(t):
                 return Any()
             if issubclass(t, typing.Union):
                 return U(*t.__union_params__)
-            if issubclass(t, typing.List):
+            if issubclass(t, typing.List) and t is not list:
                 itemtype = t.__args__[0]
                 if itemtype:
                     return ListChecker(itemtype)
                 else:
                     return ClassChecker(list)
-            if issubclass(t, typing.Dict):
+            if issubclass(t, typing.Dict) and t is not dict:
                 if t.__args__:
                     key, value = t.__args__
                     return checker_for_type({key: value})
                 else:
                     return ClassChecker(dict)
-            if issubclass(t, typing.Tuple):
+            if issubclass(t, typing.Tuple) and t is not tuple:
                 tlen = len(t.__tuple_params__)
                 if t.__tuple_use_ellipsis__:
                     assert tlen == 1
