@@ -319,17 +319,14 @@ class U(MagicType):
     one of ``type1``, ..., or ``typeN``.
     """
 
-    def __init__(self, name=None, *types):
+    def __init__(self, *types):
         assert len(types) >= 1
         self._checkers = [checker_for_type(t) for t in types]
-        self._name = name
 
     def check(self, var):
         return any(c.check(var) for c in self._checkers)
 
     def name(self):
-        if self._name:
-            return self._name
         res = [c.name() for c in self._checkers]
         if len(res) == 2 and "None" in res:
             res.remove("None")

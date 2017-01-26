@@ -8,6 +8,7 @@ import sys
 
 import colorama
 
+from typesentry.checks import checker_for_type
 from typesentry.signature import Signature
 
 __all__ = ("Config", )
@@ -62,6 +63,11 @@ class Config(object):
             assert callable(getattr(value_error, "report")), \
                 "Class %s missing method .report()" % value_error.__name__
             self._install_exception_hooks()
+
+
+    @staticmethod
+    def is_type(value, expected_type):
+        return checker_for_type(expected_type).check(value)
 
 
     #---------------------------------------------------------------------------

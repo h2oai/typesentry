@@ -9,7 +9,8 @@ import typesentry  # noqa
 
 _tc = typesentry.Config()
 typed = _tc.typed
+is_type = _tc.is_type
 TypeError = _tc.TypeError
 ValueError = _tc.ValueError
 
-__all__ = ("typed", "TypeError", "ValueError")
+__all__ = ("is_type", "typed", "TypeError", "ValueError")
