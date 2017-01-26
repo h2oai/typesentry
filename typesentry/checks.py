@@ -169,7 +169,7 @@ class BoolChecker(MagicType):
 
 class IntChecker(MagicType):
     def check(self, v):
-        return isinstance(v, _int_type)
+        return isinstance(v, _int_type) and not isinstance(v, bool)
 
     def name(self):
         return "integer"
@@ -181,7 +181,7 @@ class FloatChecker(MagicType):
     integers (see PEP-0484).
     """
     def check(self, v):
-        return isinstance(v, _num_type)
+        return isinstance(v, _num_type) and not isinstance(v, bool)
 
     def name(self):
         return "numeric"
