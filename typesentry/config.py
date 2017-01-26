@@ -8,7 +8,7 @@ import sys
 
 import colorama
 
-from typesentry.checks import checker_for_type
+from typesentry.checks import checker_for_type, U
 from typesentry.signature import Signature
 
 __all__ = ("Config", )
@@ -66,8 +66,12 @@ class Config(object):
 
 
     @staticmethod
-    def is_type(value, expected_type):
-        return checker_for_type(expected_type).check(value)
+    def is_type(value, *types):
+        if len(types) == 1:
+            checker = checker_for_type(types[0])
+        else:
+            checker = checker_for_type(U(*types))
+        return checker.check(value)
 
 
     #---------------------------------------------------------------------------
