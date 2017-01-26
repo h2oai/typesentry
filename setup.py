@@ -19,7 +19,7 @@ setup(
     description="Run-time type checking of arguments passed to functions",
 
     # The homepage
-    url="https://github.com/st-pasha/typesentry.git",
+    url="https://github.com/h2oai/typesentry.git",
 
     # Author details
     author="Pasha Stetsenko",
