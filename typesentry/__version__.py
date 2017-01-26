@@ -14,4 +14,4 @@ Version numbers are governed by PEP-440. We use the 2-part format::
 
 """
 
-version = "0.1"
+version = "0.0.1"

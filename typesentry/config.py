@@ -8,7 +8,7 @@ import sys
 
 import colorama
 
-from typechecking.signature import Signature
+from typesentry.signature import Signature
 
 __all__ = ("Config", )
 
@@ -21,8 +21,8 @@ class Config(object):
     """
     Usage::
 
-        import typechecking
-        typed = typechecking.Config().typed
+        import typesentry
+        typed = typesentry.Config().typed
 
         @typed(x=int)
         def foo(x):

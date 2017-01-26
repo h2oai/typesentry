@@ -5,9 +5,9 @@ from __future__ import print_function
 import sys
 sys.path.insert(0, "..")
 
-import typechecking  # noqa
+import typesentry  # noqa
 
-_tc = typechecking.Config()
+_tc = typesentry.Config()
 typed = _tc.typed
 TypeError = _tc.TypeError
 ValueError = _tc.ValueError
