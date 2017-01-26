@@ -271,15 +271,16 @@ class TupleChecker(MagicType):
             self._last = None
 
     def check(self, v):
+        n = len(self._checks)
         if self._last:
             return (isinstance(v, tuple) and
-                    len(v) >= len(self._checks) and
-                    all(check(v[i]) for i, check in enumerate(self._checks)) and
-                    all(self._last(elem) for elem in v[len(self._checks):]))
+                    len(v) >= n and
+                    all(c.check(v[i]) for i, c in enumerate(self._checks)) and
+                    all(self._last.check(elem) for elem in v[n:]))
         else:
             return (isinstance(v, tuple) and
-                    len(v) == len(self._checks) and
-                    all(check(v[i]) for i, check in enumerate(self._checks)))
+                    len(v) == n and
+                    all(c.check(v[i]) for i, c in enumerate(self._checks)))
 
     def name(self):
         if self._last:
@@ -296,7 +297,8 @@ class DictChecker(MagicType):
 
     def check(self, value):
         return (isinstance(value, dict) and
-                all(any(chk(k) and chv(v) for chk, chv in self._checks)
+                all(any(chk.check(k) and chv.check(v)
+                        for chk, chv in self._checks)
                     for k, v in value.items()))
 
     def name(self):
@@ -323,12 +325,12 @@ class U(MagicType):
         self._name = name
 
     def check(self, var):
-        return any(check(var) for check in self._checkers)
+        return any(c.check(var) for c in self._checkers)
 
     def name(self):
         if self._name:
             return self._name
-        res = [check.name() for check in self._checkers]
+        res = [c.name() for c in self._checkers]
         if len(res) == 2 and "None" in res:
             res.remove("None")
             return "?" + res[0]
@@ -349,10 +351,10 @@ class I(MagicType):
         self._checkers = [checker_for_type(t) for t in types]
 
     def check(self, var):
-        return all(check(var) for check in self._checkers)
+        return all(c.check(var) for c in self._checkers)
 
     def name(self):
-        return " & ".join(check.name() for check in self._checkers)
+        return " & ".join(c.name() for c in self._checkers)
 
 
 class NOT(MagicType):
@@ -368,7 +370,7 @@ class NOT(MagicType):
         self._checkers = [checker_for_type(t) for t in types]
 
     def check(self, var):
-        return not any(check(var) for check in self._checkers)
+        return not any(c.check(var) for c in self._checkers)
 
     def name(self):
         if len(self._types) > 1:
