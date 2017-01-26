@@ -12,6 +12,10 @@ dist/
 *.sublime-*
 
 
+# Coverage reports
+coverage.xml
+
+
 # Sphinx documentation
 docs/_build/
 
