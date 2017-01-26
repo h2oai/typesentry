@@ -25,7 +25,7 @@ def test_foo():
     with pytest.raises(TypeError) as e:
         foo("bar")
     assert str(e.value) == "Incorrect type for argument `x`: expected " \
-                           "integer got <class 'str'>"
+                           "integer got %s" % str
 
     with pytest.raises(TypeError) as e:
         foo(1, x=2)
