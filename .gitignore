@@ -13,6 +13,8 @@ dist/
 
 
 # Coverage reports
+htmlcov/
+.coverage
 coverage.xml
 
 
