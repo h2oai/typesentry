@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 import pytest
-from tests import is_type, py3only, U
+from tests import is_type, py3only, U, I, NOT
 
 
 def test_literals():
@@ -84,15 +84,45 @@ def test_dict():
     assert not is_type({"foo": 1, "bar": 2}, {"foo": int, str: str})
 
 
-def test_class():
-    class ABC(object):
-        pass
+def test_tuple():
+    assert is_type((1, 3), (int, int))
+    assert is_type(("a", "b", "c"), (int, int, int), (str, str, str))
+    assert is_type((0, 1, 5, 9), (int, Ellipsis))
+    assert is_type(tuple(), (int, Ellipsis))
+    assert is_type((1, "a", "spam", "ham"), (int, str, Ellipsis))
+    assert is_type((1, ), (int, str, Ellipsis))
+    # assert is_type((1, 3, 4, 7, 11, 18), Tuple(int))
+    # assert is_type((1, 3, "spam", 3, "egg"), Tuple(int, str))
+    assert not is_type(tuple(), (int, ))
+    assert not is_type([1, 2], (int, int))
+    assert not is_type(("a", 1), (int, str))
+    assert not is_type(("a", "b"), (int, str))
+    assert not is_type((1, ), (int, str))
+    assert not is_type((1, "spam", None), (int, str))
+    assert not is_type((1, 2, 3, 4, "five"), (int, Ellipsis))
+    assert not is_type((False, 1, 2, 3, 4), (int, Ellipsis))
 
-    assert is_type(ABC(), ABC)
-    assert not is_type(ABC, ABC)
-    assert not is_type("ABC", ABC)
+
+def test_class():
+    class A(object): pass
+
+    class B(A): pass
+
+    class C(A): pass
+
+    class D(B, C): pass
+
+    assert is_type(A, type)
+    assert is_type(A(), A)
+    assert is_type(B(), A)
+    assert is_type(C(), A, B)
+    assert is_type(D(), I(A, B, C))
+    assert not is_type(A, A)
+    assert not is_type("A", A)
+    assert not is_type(A(), B)
+    assert not is_type(D(), NOT(C))
     with pytest.raises(RuntimeError):
-        is_type(1, ABC())
+        is_type(1, A())
 
 @py3only
 def test_Any():
@@ -130,6 +160,7 @@ def test_List():
     assert is_type(["sam", "ham", "hum", "bum"], List[str])
     assert is_type([1, False, "monkey"], List)
     assert is_type([1, False, "monkey"], List[Any])
+    assert not is_type([1, "sam", 2], List[int])
 
 
 # @py3only

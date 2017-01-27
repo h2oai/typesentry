@@ -373,7 +373,7 @@ class NOT(MagicType):
         return not any(c.check(var) for c in self._checkers)
 
     def name(self):
-        if len(self._types) > 1:
+        if len(self._checkers) > 1:
             return "!(%s)" % " | ".join(ch.name() for ch in self._checkers)
         else:
             return "!" + self._checkers[0].name()
