@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
+import pytest
 from tests import is_type, py3only, U
 
 
@@ -39,7 +40,7 @@ def test_primitives():
     assert not is_type(True, float)
 
 
-def test_lists():
+def test_list():
     assert is_type([], [int])
     assert is_type([], [[[list]]])
     assert is_type([1, 2], list)
@@ -54,7 +55,7 @@ def test_lists():
     assert not is_type([[1]], [int])
 
 
-def test_sets():
+def test_set():
     assert is_type({1}, set)
     assert is_type(set(), set)  # literal {} is a dict!
     assert is_type(set(), {int})
@@ -65,7 +66,7 @@ def test_sets():
     assert not is_type({1, 2, 3.5, None, False}, {float, str, None})
 
 
-def test_dicts():
+def test_dict():
     assert is_type({"foo": 1, "bar": 2}, {str: int})
     assert is_type({"foo": 3, "bar": [5], "baz": None},
                    {str: U(None, int, [int])})
@@ -82,6 +83,16 @@ def test_dicts():
     assert not is_type({"foo": 1, "bar": 2}, {"foo": int})
     assert not is_type({"foo": 1, "bar": 2}, {"foo": int, str: str})
 
+
+def test_class():
+    class ABC(object):
+        pass
+
+    assert is_type(ABC(), ABC)
+    assert not is_type(ABC, ABC)
+    assert not is_type("ABC", ABC)
+    with pytest.raises(RuntimeError):
+        is_type(1, ABC())
 
 @py3only
 def test_Any():

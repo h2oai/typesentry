@@ -7,11 +7,12 @@ import sys
 sys.path.insert(0, "..")
 
 import typesentry  # noqa
-from typesentry import U, I, NOT  # noqa
+from typesentry import U, I, NOT, MagicType  # noqa
 
 _tc = typesentry.Config()
 typed = _tc.typed
 is_type = _tc.is_type
+name_type = _tc.name_type
 TypeError = _tc.TypeError
 ValueError = _tc.ValueError
 
@@ -22,5 +23,5 @@ py3only = pytest.mark.skipif(sys.version_info < (3, 5),
                              reason="at least mymodule-1.1 required")
 
 
-__all__ = ("is_type", "typed", "py3only", "TypeError", "ValueError",
-           "U", "I", "NOT")
+__all__ = ("is_type", "name_type", "typed", "TypeError", "ValueError",
+           "py3only", "U", "I", "NOT", "MagicType")

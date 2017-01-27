@@ -74,6 +74,15 @@ class Config(object):
         return checker.check(value)
 
 
+    @staticmethod
+    def name_type(*types):
+        if len(types) == 1:
+            checker = checker_for_type(types[0])
+        else:
+            checker = checker_for_type(U(*types))
+        return checker.name()
+
+
     #---------------------------------------------------------------------------
     # Private
     #---------------------------------------------------------------------------

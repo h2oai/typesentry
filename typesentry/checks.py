@@ -27,6 +27,8 @@ except ImportError:
 
 def checker_for_type(t):
     try:
+        if t is True: return true_checker
+        if t is False: return false_checker
         checker = memoized_type_checkers.get(t)
         if checker is not None:
             return checker
@@ -60,7 +62,7 @@ def _create_checker_for_type(t):
                 if itemtype:
                     return ListChecker(itemtype)
                 else:
-                    return ClassChecker(list)
+                    return ClassChecker(list, name="List")
             if issubclass(t, typing.Dict) and t is not dict:
                 if t.__args__:
                     key, value = t.__args__
@@ -136,14 +138,15 @@ class Any(MagicType):
 
 
 class ClassChecker(MagicType):
-    def __init__(self, cls):
+    def __init__(self, cls, name=None):
         self.cls = cls
+        self._name = name
 
     def check(self, v):
         return isinstance(v, self.cls)
 
     def name(self):
-        return self.cls.__name__
+        return self._name or self.cls.__name__
 
 
 
@@ -389,3 +392,6 @@ memoized_type_checkers = {
     str: StrChecker(),
     Any: Any(),
 }
+
+true_checker = LiteralChecker(True)
+false_checker = LiteralChecker(False)
