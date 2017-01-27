@@ -22,6 +22,7 @@ class Signature(object):
         self.num_self_args = 1 if fspec.args and fspec.args[0] == "self" else 0
         self.retchecker = None
         self.checkers = {}
+        self.argsset = set(fspec.args)
 
         # Minimum number of arguments that must be supplied -- all the other
         # have defaults and can be omitted.
@@ -42,11 +43,12 @@ class Signature(object):
 
         if "_return" in types:
             rettype = types.pop("_return")
-            self.retval_checker = checker_for_type(rettype)
+            self._retval_checker = checker_for_type(rettype)
         else:
-            self.retval_checker = lambda x: None
+            self._retval_checker = None
 
         self._create_checkers(types)
+        self.retval_checker = self.make_retval_checker()
 
 
     @property
@@ -57,11 +59,6 @@ class Signature(object):
     @property
     def name_bt(self):
         return "`%s()`" % self.name
-
-
-    @property
-    def has_self_arg(self):
-        return self.argnames and self.argnames[0] == "self"
 
 
     @property
@@ -106,10 +103,25 @@ class Signature(object):
         return _checker
 
 
+    def make_retval_checker(self):
+        """Create a function that checks the return value of the function."""
+        if self._retval_checker:
+            def _checker(retval):
+                if not self._retval_checker.check(retval):
+                    raise self.tc_config.TypeError(
+                        "Incorrect return type in %s: expected %s got %s" %
+                        (self.name_bt, self._retval_checker.name(),
+                         checker_for_type(type(retval)).name())
+                    )
+        else:
+            def _checker(retval):
+                pass
+        return _checker
+
+
     def _create_checkers(self, types):
         # TODO: merge with ``make_args_checker()``
         for argname, argtype in types.items():
-            if argname == "_kwless": continue
             checker = checker_for_type(argtype)
             if argname == self.vararg:
                 self.checkers["*"] = checker
@@ -131,9 +143,8 @@ class Signature(object):
         else:
             num_args -= self.num_self_args
             plu1 = "argument" if self.max_positional_args == 1 else "arguments"
-            plu2 = "was" if num_args == 1 else "were"
-            s += "takes %d positional %s but %d %s given" % \
-                 (self.max_positional_args, plu1, num_args, plu2)
+            s += "takes %d positional %s but %d were given" % \
+                 (self.max_positional_args, plu1, num_args)
         return self.tc_config.TypeError(s)
 
 
@@ -158,15 +169,18 @@ class Signature(object):
 
     def _check_positional_arg(self, index, value):
         if index < len(self.argnames):
-            checker = self.checkers.get(self.argnames[index])
+            argname = self.argnames[index]
+            checker = self.checkers.get(argname)
         else:
             assert self.vararg
+            argname = "*" + self.vararg
             checker = self.checkers.get("*")
         if checker:
             if not checker.check(value):
+                tval = checker_for_type(type(value)).name()
                 raise self.tc_config.TypeError(
-                    "Incorrect type for argument `%s`: expected %s got %r" %
-                    (self.argnames[index], checker.name(), type(value))
+                    "Incorrect type for argument `%s`: expected %s got %s" %
+                    (argname, checker.name(), tval)
                 )
 
 
@@ -175,11 +189,13 @@ class Signature(object):
                    self.varkws and self.checkers.get("**"))
         if checker:
             if not checker.check(value):
-                raise self.TypeError(
-                    "Incorrect type for argument `%s`: expected %s got %r" %
-                    (name, checker.name(), type(value))
+                tval = checker_for_type(type(value)).name()
+                raise self.tc_config.TypeError(
+                    "Incorrect type for argument `%s`: expected %s got %s" %
+                    (name, checker.name(), tval)
                 )
-        elif not self.varkws:
-            s = "%s got an unexpected keyword argument `%s`" % \
-                (self.name_bt, name)
-            raise self.tc_config.TypeError(s)
+        else:
+            if not self.varkws and name not in self.argsset:
+                s = "%s got an unexpected keyword argument `%s`" % \
+                    (self.name_bt, name)
+                raise self.tc_config.TypeError(s)

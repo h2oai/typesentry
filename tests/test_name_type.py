@@ -49,6 +49,7 @@ def test_collections():
     assert name_type(list) == "list"
     assert name_type(set) == "set"
     assert name_type([int]) == "List[integer]"
+    assert name_type([int, str]) == "List[integer | string]"
 
 
 @py3only
