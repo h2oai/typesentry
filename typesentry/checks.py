@@ -56,7 +56,7 @@ def _create_checker_for_type(t):
             if issubclass(t, typing.Union):
                 return U(*t.__union_params__)
             if issubclass(t, typing.List) and t is not list:
-                itemtype = t.__args__[0]
+                itemtype = t.__args__ and t.__args__[0]
                 if itemtype:
                     return ListChecker(itemtype)
                 else:
