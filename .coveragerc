@@ -1,0 +1,17 @@
+[run]
+# Measure branch coverage in addition to statement coverage
+branch = True
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Re-enable the standard pragma
+    pragma: no cover
+
+    # None-runnable code:
+    if False:
+    if __name__ == .__main__.:
+
+# the number of digits after the decimal point to display for reported
+# coverage percentages
+precision = 2
