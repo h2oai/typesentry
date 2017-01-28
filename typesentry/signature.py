@@ -11,35 +11,58 @@ class Signature(object):
     Function signature record
     """
 
-    def __init__(self, f, types, config):
-        self.tc_config = config
-        fspec = inspect.getargspec(f)
-        self.function = f
-        self.vararg = fspec.varargs
-        self.varkws = fspec.keywords
-        self.argnames = tuple(fspec.args)
-        self.argindices = {name: i for i, name in enumerate(fspec.args)}
-        self.num_self_args = 1 if fspec.args and fspec.args[0] == "self" else 0
+    def __init__(self, func, types, typesentry_config):
+        self._tc = typesentry_config
+        self.function = func
+        if hasattr(inspect, "getfullargspec"):
+            fspec = inspect.getfullargspec(func)
+            # List of positional arguments (both positional-only and
+            # positional/keyword arguments)
+            self.args = fspec.args
+            # List of keyword-only arguments (may be empty, but not None)
+            self.kwonlyargs = fspec.kwonlyargs
+            # Name of the "*args" argument, or None if there isn't one
+            self.varargs = fspec.varargs
+            # Name of the "**kws" argument, or None if there isn't one
+            self.varkw = fspec.varkw
+            # Number of positional arguments without defatuls
+            self.num_required_args = len(self.args) - len(fspec.defaults or [])
+            # List of keyword-only arguments with no defaults
+            self.required_kwonlyargs = list(set(self.kwonlyargs) -
+                                            set(fspec.kwonlydefaults or []))
+        else:
+            fspec = inspect.getargspec(func)
+            self.args = fspec.args
+            self.kwonlyargs = []
+            self.varargs = fspec.varargs
+            self.varkw = fspec.keywords
+            self.num_required_args = len(self.args) - len(fspec.defaults or [])
+            self.required_kwonlyargs = []
+
         self.retchecker = None
         self.checkers = {}
-        self.argsset = set(fspec.args)
+
+        self.argindices = {name: i for i, name in enumerate(self.args)}
+        self.argsset = set(self.args)
+        self.num_self_args = 1 if self.args and self.args[0] == "self" else 0
 
         # Minimum number of arguments that must be supplied -- all the other
         # have defaults and can be omitted.
-        self.min_args = len(fspec.args) - len(fspec.defaults or [])
-
-        # Maximum number of args that can be supplied positionally (i.e. without
-        # a name).
-        self.max_positional_args = 65536 if self.vararg else len(fspec.args)
+        self.min_args = len(self.args) - len(fspec.defaults or [])
 
         if "_kwless" in types:
             kwless = types.pop("_kwless")
-            assert not self.vararg, "_kwless cannot be used with varargs"
+            assert not self.varargs, "_kwless cannot be used with varargs"
             assert isinstance(kwless, int), "_kwless should be an int"
             kwless += self.num_self_args
-            assert kwless < len(self.argnames), \
+            assert kwless < len(self.args), \
                 "_kwless cannot exceed the number of arguments"
-            self.max_positional_args = kwless
+            self.kwonlyargs = self.args[kwless:]
+            self.args = self.args[:kwless]
+            if kwless < self.num_required_args:
+                self.required_kwonlyargs = \
+                    set(self.kwonlyargs[:self.num_required_args - kwless])
+                self.num_required_args = kwless
 
         if "_return" in types:
             rettype = types.pop("_return")
@@ -52,42 +75,43 @@ class Signature(object):
 
 
     @property
-    def name(self):
-        return self.function.__name__
-
-
-    @property
     def name_bt(self):
-        return "`%s()`" % self.name
+        return "`%s()`" % self.function.__name__
 
 
     @property
     def has_no_args(self):
-        return (self.vararg is None and self.varkws is None and
-                len(self.argnames) == self.num_self_args)
+        return (self.varargs is None and self.varkw is None and
+                len(self.kwonlyargs) == 0 and
+                len(self.args) == self.num_self_args)
 
     @property
     def has_only_kwargs(self):
-        return self.max_positional_args == self.num_self_args
+        return len(self.args) == self.num_self_args
 
 
     def make_args_checker(self):
         """
-        Create a function that checks signature of the function.
+        Create a function that checks signature of the source function.
         """
         def _checker(*args, **kws):
             # Check if too many arguments are provided
             num_args = len(args)
-            if num_args > self.max_positional_args:
+            if num_args > len(self.args) and not self.varargs:
                 raise self._too_many_args_error(num_args)
 
             # Check if there are too few arguments (without defaults)
-            if num_args < self.min_args:
+            if num_args < self.num_required_args:
                 missing = [arg
-                           for arg in self.argnames[num_args:self.min_args]
+                           for arg in self.args[num_args:self.num_required_args]
                            if arg not in kws]
                 if missing:
-                    raise self._too_few_args_error(missing)
+                    raise self._too_few_args_error(missing, "positional")
+
+            if self.required_kwonlyargs:
+                missing = [k for k in self.required_kwonlyargs if k not in kws]
+                if missing:
+                    raise self._too_few_args_error(missing, "keyword")
 
             # Check types of positional arguments
             for i, argvalue in enumerate(args):
@@ -108,7 +132,7 @@ class Signature(object):
         if self._retval_checker:
             def _checker(retval):
                 if not self._retval_checker.check(retval):
-                    raise self.tc_config.TypeError(
+                    raise self._tc.TypeError(
                         "Incorrect return type in %s: expected %s got %s" %
                         (self.name_bt, self._retval_checker.name(),
                          checker_for_type(type(retval)).name())
@@ -123,18 +147,17 @@ class Signature(object):
         # TODO: merge with ``make_args_checker()``
         for argname, argtype in types.items():
             checker = checker_for_type(argtype)
-            if argname == self.vararg:
+            if argname == self.varargs:
                 self.checkers["*"] = checker
-            elif argname == self.varkws:
+            elif argname == self.varkw:
                 self.checkers["**"] = checker
             else:
-                assert argname in self.argnames, \
+                assert argname in self.args or argname in self.kwonlyargs, \
                     "`%s` is not a valid function argument" % argname
                 self.checkers[argname] = checker
 
 
     def _too_many_args_error(self, num_args):
-        assert num_args > self.max_positional_args
         s = self.name_bt + " "
         if self.has_no_args:
             s += "doesn't take any arguments"
@@ -142,43 +165,43 @@ class Signature(object):
             s += "accepts only keyword arguments"
         else:
             num_args -= self.num_self_args
-            plu1 = "argument" if self.max_positional_args == 1 else "arguments"
+            plu1 = "argument" if len(self.args) == 1 else "arguments"
             s += "takes %d positional %s but %d were given" % \
-                 (self.max_positional_args, plu1, num_args)
-        return self.tc_config.TypeError(s)
+                 (len(self.args), plu1, num_args)
+        return self._tc.TypeError(s)
 
 
-    def _too_few_args_error(self, missing_args):
+    def _too_few_args_error(self, missing_args, argtype):
         num_missing = len(missing_args)
         assert num_missing > 0
         plural = "argument" if num_missing == 1 else "arguments"
-        s = "%s missing %d required positional %s" % \
-            (self.name_bt, num_missing, plural)
+        s = "%s missing %d required %s %s" % \
+            (self.name_bt, num_missing, argtype, plural)
         if num_missing == 1:
             s += " `%s`" % missing_args[0]
         else:
             s += ": " + ", ".join("`%s`" % a for a in missing_args[:-1]) + \
                  " and `%s`" % missing_args[-1]
-        return self.tc_config.TypeError(s)
+        return self._tc.TypeError(s)
 
 
     def _repeating_arg_error(self, arg):
         s = self.name_bt + " got multiple values for argument `%s`" % arg
-        return self.tc_config.TypeError(s)
+        return self._tc.TypeError(s)
 
 
     def _check_positional_arg(self, index, value):
-        if index < len(self.argnames):
-            argname = self.argnames[index]
+        if index < len(self.args):
+            argname = self.args[index]
             checker = self.checkers.get(argname)
         else:
-            assert self.vararg
-            argname = "*" + self.vararg
+            assert self.varargs
+            argname = "*" + self.varargs
             checker = self.checkers.get("*")
         if checker:
             if not checker.check(value):
                 tval = checker_for_type(type(value)).name()
-                raise self.tc_config.TypeError(
+                raise self._tc.TypeError(
                     "Incorrect type for argument `%s`: expected %s got %s" %
                     (argname, checker.name(), tval)
                 )
@@ -186,16 +209,16 @@ class Signature(object):
 
     def _check_keyword_arg(self, name, value):
         checker = (self.checkers.get(name) or
-                   self.varkws and self.checkers.get("**"))
+                   self.varkw and self.checkers.get("**"))
         if checker:
             if not checker.check(value):
                 tval = checker_for_type(type(value)).name()
-                raise self.tc_config.TypeError(
+                raise self._tc.TypeError(
                     "Incorrect type for argument `%s`: expected %s got %s" %
                     (name, checker.name(), tval)
                 )
         else:
-            if not self.varkws and name not in self.argsset:
+            if not self.varkw and name not in self.argsset:
                 s = "%s got an unexpected keyword argument `%s`" % \
                     (self.name_bt, name)
-                raise self.tc_config.TypeError(s)
+                raise self._tc.TypeError(s)

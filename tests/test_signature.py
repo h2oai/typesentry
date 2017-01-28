@@ -2,7 +2,7 @@
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 import pytest
 import time
-from tests import typed, TypeError
+from tests import typed, py3only, TypeError
 
 
 def test_func_0args0kws():
@@ -164,10 +164,22 @@ def test_kwless():
     def bar(x, y):
         return (x, y)
 
+    @typed(_kwless=2)
+    def baz(a, b, c, d=4):
+        return True
+
+    @typed(_kwless=1)
+    def ooz(a, b=2, x=None):
+        return True
+
     assert foo(x=1, y=2)
     assert foo(y="spam", x="ham")
     assert bar(x=3, y=4)
     assert bar(3, y=7)
+    assert baz(1, 2, c=3, d=4)
+    assert baz(1, 2, c=3)
+    assert ooz(3)
+    assert ooz(5, b=0)
 
     with pytest.raises(TypeError) as e:
         foo(1, 2)
@@ -179,17 +191,33 @@ def test_kwless():
 
     with pytest.raises(TypeError) as e:
         bar(1, x=2)
-    assert str(e.value) == "`bar()` missing 1 required positional argument `y`"
+    assert str(e.value) == "`bar()` missing 1 required keyword argument `y`"
+
+    with pytest.raises(TypeError) as e:
+        bar(1)
+    assert str(e.value) == "`bar()` missing 1 required keyword argument `y`"
 
     with pytest.raises(TypeError) as e:
         bar(1, smth=2)
-    assert str(e.value) == "`bar()` missing 1 required positional argument `y`"
+    assert str(e.value) == "`bar()` missing 1 required keyword argument `y`"
 
     with pytest.raises(TypeError) as e:
         bar(1, 2)
     assert str(e.value) == "`bar()` takes 1 positional argument but 2 " \
                            "were given"
 
+    with pytest.raises(TypeError) as e:
+        baz(1, 2, 3, 4)
+    assert str(e.value) == "`baz()` takes 2 positional arguments but 4 " \
+                           "were given"
+
+    with pytest.raises(TypeError) as e:
+        baz(1, 2, d=5)
+    assert str(e.value) == "`baz()` missing 1 required keyword argument `c`"
+
+    with pytest.raises(TypeError) as e:
+        baz(1, c=2, d=5)
+    assert str(e.value) == "`baz()` missing 1 required positional argument `b`"
 
 
 
@@ -203,3 +231,13 @@ def test_bad_declaration():
         @typed(_kwless=1)
         def foo2():
             pass
+
+
+@py3only
+def test_function_with_signature():
+    exec("@typed()\n"
+         "def foo(x: int = None):\n"
+         "    return True\n", locals(), globals())
+
+    assert foo()  # noqa
+    assert foo(1)  # noqa
