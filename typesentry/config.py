@@ -120,12 +120,12 @@ class Config(object):
             # return a decorator object.
             def prepared_decorator(f):
                 sig = Signature(f, types, self)
-                check_args = sig.make_args_checker()
-                check_retval = sig.retval_checker
+                check_params = sig.params_checker
+                check_retval = sig.return_checker
 
                 @functools.wraps(f)
                 def fdecorated(*args, **kws):
-                    check_args(*args, **kws)
+                    check_params(*args, **kws)
                     ret = f(*args, **kws)
                     check_retval(ret)
                     return ret

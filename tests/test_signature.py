@@ -155,81 +155,10 @@ def test_return_value():
 
 
 
-def test_kwless():
-    @typed(_kwless=0)
-    def foo(x, y):
-        return (x, y)
-
-    @typed(_kwless=1)
-    def bar(x, y):
-        return (x, y)
-
-    @typed(_kwless=2)
-    def baz(a, b, c, d=4):
-        return True
-
-    @typed(_kwless=1)
-    def ooz(a, b=2, x=None):
-        return True
-
-    assert foo(x=1, y=2)
-    assert foo(y="spam", x="ham")
-    assert bar(x=3, y=4)
-    assert bar(3, y=7)
-    assert baz(1, 2, c=3, d=4)
-    assert baz(1, 2, c=3)
-    assert ooz(3)
-    assert ooz(5, b=0)
-
-    with pytest.raises(TypeError) as e:
-        foo(1, 2)
-    assert str(e.value) == "`foo()` accepts only keyword arguments"
-
-    with pytest.raises(TypeError) as e:
-        foo(1, y=2)
-    assert str(e.value) == "`foo()` accepts only keyword arguments"
-
-    with pytest.raises(TypeError) as e:
-        bar(1, x=2)
-    assert str(e.value) == "`bar()` missing 1 required keyword argument `y`"
-
-    with pytest.raises(TypeError) as e:
-        bar(1)
-    assert str(e.value) == "`bar()` missing 1 required keyword argument `y`"
-
-    with pytest.raises(TypeError) as e:
-        bar(1, smth=2)
-    assert str(e.value) == "`bar()` missing 1 required keyword argument `y`"
-
-    with pytest.raises(TypeError) as e:
-        bar(1, 2)
-    assert str(e.value) == "`bar()` takes 1 positional argument but 2 " \
-                           "were given"
-
-    with pytest.raises(TypeError) as e:
-        baz(1, 2, 3, 4)
-    assert str(e.value) == "`baz()` takes 2 positional arguments but 4 " \
-                           "were given"
-
-    with pytest.raises(TypeError) as e:
-        baz(1, 2, d=5)
-    assert str(e.value) == "`baz()` missing 1 required keyword argument `c`"
-
-    with pytest.raises(TypeError) as e:
-        baz(1, c=2, d=5)
-    assert str(e.value) == "`baz()` missing 1 required positional argument `b`"
-
-
-
 def test_bad_declaration():
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         @typed(z=int)
         def foo1():
-            pass
-
-    with pytest.raises(AssertionError):
-        @typed(_kwless=1)
-        def foo2():
             pass
 
 
