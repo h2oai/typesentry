@@ -12,6 +12,9 @@ exclude_lines =
     if False:
     if __name__ == .__main__.:
 
+    # Mostly debugging code:
+    def __repr__\(self\):
+
 # the number of digits after the decimal point to display for reported
 # coverage percentages
 precision = 2

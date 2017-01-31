@@ -117,6 +117,7 @@ def test_func_varargs():
                            "integer got string"
 
 
+
 def test_func_varkws():
     @typed(kws=float)
     def foo(**kws):
@@ -134,6 +135,7 @@ def test_func_varkws():
     with pytest.raises(TypeError) as e:
         foo(1, 2, x=10)
     assert str(e.value) == "`foo()` accepts only keyword arguments"
+
 
 
 def test_return_value():
@@ -156,10 +158,19 @@ def test_return_value():
 
 
 def test_bad_declaration():
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError) as e:
         @typed(z=int)
         def foo1():
             pass
+    assert str(e.value) == "Invalid function argument(s): z"
+
+    with pytest.raises(RuntimeError) as e:
+        class A(object):
+            @typed(self=int)
+            def __init__(self):
+                pass
+    assert str(e.value) == "`self` parameter must not be typed"
+
 
 
 @py3only
@@ -170,3 +181,21 @@ def test_function_with_signature():
 
     assert foo()  # noqa
     assert foo(1)  # noqa
+
+
+
+def test_defaults():
+    @typed(x=int)
+    def foo(x=None):
+        return True
+
+    assert foo()
+    assert foo(5)
+    assert foo(None)
+    assert foo(x=10)
+    assert foo(x=None)
+
+    with pytest.raises(TypeError) as e:
+        foo(x="")
+    assert str(e.value) == "Incorrect type for argument `x`: expected " \
+                           "integer got string"

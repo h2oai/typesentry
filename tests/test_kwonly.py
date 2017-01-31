@@ -3,6 +3,10 @@
 import pytest
 from tests import typed, py3only, TypeError
 
+foo = 1
+bar = 2
+baz = 3
+
 
 def test_kwonly1():
     @typed(_kwonly=2)
@@ -87,6 +91,21 @@ def test_kwonly4():
 
 @py3only
 def test_py3_signatures():
+    exec("@typed(x=int, y=int)\n"
+         "def bar(x, *, y):\n"
+         "    return x + y\n", locals(), globals())
+
+    assert bar(1, y=2) == 3
+    assert bar(x=5, y=7) == 12
+
+    exec("@typed(x=int, y=int)\n"
+         "def baz(x, *, y=5):\n"
+         "    return x + y\n", locals(), globals())
+
+    assert baz(5) == 10
+    assert baz(x=1) == 6
+    assert baz(x=1, y=2) == 3
+
     with pytest.raises(RuntimeError) as e:
         exec("@typed(_kwonly=1)\n"
              "def foo(x, *, y):\n"
@@ -95,7 +114,14 @@ def test_py3_signatures():
                            "argument in Python3"
 
 
+
 def test_bad_declarations():
+    with pytest.raises(RuntimeError) as e:
+        @typed(_kwonly=None)
+        def foo0():
+            pass
+    assert str(e.value) == "_kwonly parameter should be an integer"
+
     with pytest.raises(RuntimeError) as e:
         @typed(_kwonly=1)
         def foo2():
@@ -113,3 +139,11 @@ def test_bad_declarations():
         def foo4(*args, **varargs):
             pass
     assert str(e.value) == "Too many keyword-only parameters requested"
+
+    with pytest.raises(RuntimeError) as e:
+        class A(object):
+            @typed(_kwonly=1)
+            def __init__(self):
+                pass
+    assert str(e.value) == "POSITIONAL_ONLY parameter self cannot be made " \
+                           "KEYWORD_ONLY"

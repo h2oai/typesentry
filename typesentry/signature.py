@@ -71,6 +71,11 @@ class Signature(object):
             self._min_positional_args = len(fspec.args)
             for arg in fspec.args:
                 p = Parameter(arg)
+                if arg == "self" and len(self.params) == 0:
+                    self._num_self_args = 1
+                    p = Parameter("self", kind="POSITIONAL_ONLY")
+                    if "self" in types:
+                        raise RuntimeError("`self` parameter must not be typed")
                 if arg in types:
                     p.type = types.pop(arg)
                 self.params.append(p)
@@ -96,9 +101,11 @@ class Signature(object):
                 self.params.append(p)
 
         if getattr(fspec, "kwonlydefaults", None):
-            for i in range(1, len(fspec.kwonlydefaults) + 1):
-                self.params[-i].default = fspec.kwonlydefaults[-i]
-                self._required_kwonly_args.remove(self.params[-i].name)
+            fkw = fspec.kwonlydefaults
+            for i in range(1, len(fkw) + 1):
+                p = self.params[-i]
+                p.default = fkw[p.name]
+                self._required_kwonly_args.remove(p.name)
 
         if getattr(fspec, "varkw", None) or getattr(fspec, "keywords", None):
             vkw = getattr(fspec, "varkw", None) or getattr(fspec, "keywords")
@@ -142,13 +149,10 @@ class Signature(object):
                                             self._max_positional_args)
 
         if types:
-            raise RuntimeError("Invalid function argument(s): %r" %
-                               list(types.keys()))
+            raise RuntimeError("Invalid function argument(s): %s" %
+                               ", ".join(types.keys()))
 
         self._iargs = {param.name: i for i, param in enumerate(self.params)}
-
-        if self.params and self.params[0].name == "self":
-            self._num_self_args = 1
 
 
 
@@ -215,18 +219,11 @@ class Signature(object):
         if index < self._max_positional_args:
             param = self.params[index]
             argname = param.name
-            checker = param.checker
         else:
             assert self._ivararg is not None
             param = self.params[self._ivararg]
             argname = "*" + param.name
-            checker = param.checker
-        if checker and not checker.check(value):
-            tval = checker_for_type(type(value)).name()
-            raise self._tc.TypeError(
-                "Incorrect type for argument `%s`: expected %s got %s" %
-                (argname, checker.name(), tval)
-            )
+        self._check_arg(param, argname, value)
 
 
     def _check_keyword_arg(self, name, value):
@@ -237,15 +234,24 @@ class Signature(object):
             s = "%s got an unexpected keyword argument `%s`" % \
                 (self.name_bt, name)
             raise self._tc.TypeError(s)
+        self._check_arg(self.params[index], name, value)
 
-        checker = self.params[index].checker
-        if checker:
-            if not checker.check(value):
-                tval = checker_for_type(type(value)).name()
-                raise self._tc.TypeError(
-                    "Incorrect type for argument `%s`: expected %s got %s" %
-                    (name, checker.name(), tval)
-                )
+
+    def _check_arg(self, param, name, value):
+        checker = param.checker
+        if not checker:
+            return
+        if checker.check(value):
+            return
+        if param.has_default:
+            dflt = param.default
+            if value is dflt or value == dflt:
+                return
+        tval = checker_for_type(type(value)).name()
+        raise self._tc.TypeError(
+            "Incorrect type for argument `%s`: expected %s got %s" %
+            (name, checker.name(), tval)
+        )
 
 
     @property
@@ -326,7 +332,7 @@ class Parameter(object):
 
 
     @property
-    def type(self):
+    def type(self):  # pragma: no cover
         return self._type
 
     @type.setter
@@ -339,12 +345,12 @@ class Parameter(object):
         return self._checker
 
     @property
-    def has_default(self):
-        return self._has_default
-
-    @property
     def is_required(self):
         return not self._has_default
+
+    @property
+    def has_default(self):
+        return self._has_default
 
     @property
     def default(self):
