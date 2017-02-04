@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 from __future__ import division, print_function
-import builtins
 import functools
 import re
 import sys
@@ -14,12 +13,14 @@ from typesentry.signature import Signature
 __all__ = ("Config", )
 
 
-class TypeError(builtins.TypeError):
+# Derive from the builtin TypeError
+class TypeError(TypeError):
     def report(self):
         _handle_tc_error(self)
 
 
-class ValueError(builtins.ValueError):
+# Derive from the builtin ValueError
+class ValueError(ValueError):
     def report(self):
         _handle_tc_error(self)
 
