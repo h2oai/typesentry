@@ -40,6 +40,14 @@ def test_primitives():
     assert not is_type(True, float)
 
 
+def test_datetime():
+    import datetime
+    d0 = datetime.datetime.now()
+    d1 = d0 + datetime.timedelta(days=3)
+    assert is_type(d0, datetime.datetime)
+    assert is_type((d0, d1), (datetime.datetime, datetime.datetime))
+
+
 def test_list():
     assert is_type([], [int])
     assert is_type([], [[[list]]])
