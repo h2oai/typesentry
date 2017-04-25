@@ -53,10 +53,6 @@ def _create_checker_for_type(t):
         if issubclass(t, MagicType):
             return t()
         if typing:
-            if t is typing.Any:
-                return Any()
-            if issubclass(t, typing.Union):
-                return U(*t.__union_params__)
             if issubclass(t, typing.List) and t is not list:
                 itemtype = t.__args__ and t.__args__[0]
                 if itemtype:
@@ -79,6 +75,14 @@ def _create_checker_for_type(t):
         # `t` is a name of the class, or a built-in type such as
         # `list, `tuple`, etc
         return ClassChecker(t)
+    if typing:
+        if t is typing.Any:
+            return Any()
+        if type(t) is type(typing.Union):  # flake8: disable=E721
+            try:
+                return U(*t.__union_params__)
+            except AttributeError:
+                return U(*t.__args__)
     if isinstance(t, list):
         # `t` is a list literal
         return ListChecker(U(*t))
