@@ -18,6 +18,7 @@ def test_reporting():
         foo("just a flesh wound!")
         assert False, "Expected a failure above"
     except TE as e:
+        assert str(type(e)) == "<class 'typesentry.config.TypeError'>"
         e._handle_()
 
 

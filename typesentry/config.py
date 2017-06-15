@@ -26,7 +26,9 @@ class TsValueError(ValueError):
 
 
 TsTypeError.__name__ = "TypeError"
+TsTypeError.__qualname__ = "TypeError"
 TsValueError.__name__ = "ValueError"
+TsValueError.__qualname__ = "ValueError"
 
 
 
