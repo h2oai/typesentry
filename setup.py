@@ -42,6 +42,7 @@ setup(
     # Runtime dependencies
     install_requires=[
         "colorama>=0.3",
+        "typesentry==" + version,
     ],
     tests_require=[
         "pytest>=3.0",

@@ -14,15 +14,19 @@ __all__ = ("Config", )
 
 
 # Derive from the builtin TypeError
-class TypeError(TypeError):
-    def report(self):
+class TsTypeError(TypeError):
+    def _handle_(self):
         _handle_tc_error(self)
 
 
 # Derive from the builtin ValueError
-class ValueError(ValueError):
-    def report(self):
+class TsValueError(ValueError):
+    def _handle_(self):
         _handle_tc_error(self)
+
+
+TsTypeError.__name__ = "TypeError"
+TsValueError.__name__ = "ValueError"
 
 
 
@@ -39,7 +43,7 @@ class Config(object):
 
     """
 
-    def __init__(self, type_error=TypeError, value_error=ValueError,
+    def __init__(self, type_error=TsTypeError, value_error=TsValueError,
                  disabled=False, soft_exceptions=True):
         """
         Create new type-checking configuration.
@@ -51,18 +55,19 @@ class Config(object):
             error occurs. It is recommended that this class derives from the
             standard ``ValueError``.
         :param disabled: if True, then all type-checking will be disabled.
-        :param soft_exceptions: if True, then exceptions raised by this module
-            will use a custom exception handler (method ``.report()`` on the
-            exception object).
+        :param soft_exceptions: if True, then a custom exceptions handler will
+            be installed at the console level, which will catch any exception
+            with method ``._handle_()`` and use that method to report the
+            error.
         """
         self.TypeError = type_error
         self.ValueError = value_error
         self.typed = self._make_typed(disabled)
         if soft_exceptions:
-            assert callable(getattr(type_error, "report")), \
-                "Class %s missing method .report()" % type_error.__name__
-            assert callable(getattr(value_error, "report")), \
-                "Class %s missing method .report()" % value_error.__name__
+            assert callable(getattr(type_error, "_handle_")), \
+                "Class %s missing method ._handle_()" % type_error.__name__
+            assert callable(getattr(value_error, "_handle_")), \
+                "Class %s missing method ._handle_()" % value_error.__name__
             self._install_exception_hooks()
 
 
@@ -94,8 +99,8 @@ class Config(object):
         def except_hook(exc_type, exc_value, exc_tb):  # pragma: no cover
             # This function cannot be tested, becauses it can only be executed
             # by the Python's console
-            if isinstance(exc_value, (self.TypeError, self.ValueError)):
-                exc_value.report()
+            if hasattr(exc_value, "_handle_"):
+                exc_value._handle_()
             else:
                 previous_except_hook(exc_type, exc_value, exc_tb)
 

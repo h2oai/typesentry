@@ -18,12 +18,12 @@ def test_reporting():
         foo("just a flesh wound!")
         assert False, "Expected a failure above"
     except TE as e:
-        e.report()
+        e._handle_()
 
 
 def test_custom_exceptions():
     class CustomError(TypeError):
-        def report(self):
+        def _handle_(self):
             pass
 
     conf = typesentry.Config(type_error=CustomError, value_error=CustomError,
@@ -37,7 +37,7 @@ def test_custom_exceptions():
         foo("bazinga!")
         assert False, "Expected a failure"
     except CustomError as e:
-        e.report()
+        e._handle_()
 
 
 def test_disabled():
