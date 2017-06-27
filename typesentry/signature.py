@@ -68,6 +68,7 @@ class Signature(object):
             fspec = inspect.getfullargspec(srcfun)
         else:
             fspec = inspect.getargspec(srcfun)
+        fann = getattr(fspec, "annotations", None)
 
         if fspec.args:
             self._max_positional_args = len(fspec.args)
@@ -81,12 +82,12 @@ class Signature(object):
                         raise RuntimeError("`self` parameter must not be typed")
                 if arg in types:
                     p.type = types.pop(arg)
-                if fspec.annotations and arg in fspec.annotations:
+                if fann and arg in fann:
                     if p.type:
                         raise RuntimeError(
                             "Parameter `%s` should not have its type specified "
                             "both in @typed() and in the annotations" % arg)
-                    p.type = fspec.annotations[arg]
+                    p.type = fann[arg]
                 self.params.append(p)
 
         if fspec.defaults:
@@ -126,8 +127,9 @@ class Signature(object):
 
         if "_return" in types:
             self.retval.type = types.pop("_return")
-        elif fspec.annotations and "return" in fspec.annotations:
-            self.retval.type = fspec.annotations["return"]
+        else:
+            if fann and "return" in fann:
+                self.retval.type = fann["return"]
 
         if "_kwonly" in types:
             kwonly = types.pop("_kwonly")
