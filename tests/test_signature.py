@@ -181,6 +181,10 @@ def test_function_with_signature():
 
     assert foo()  # noqa
     assert foo(1)  # noqa
+    with pytest.raises(TypeError) as e:
+        foo("oo")
+    assert str(e.value) == "Incorrect type for argument `x`: expected " \
+                           "integer got string"
 
 
 

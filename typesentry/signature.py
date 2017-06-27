@@ -61,10 +61,13 @@ class Signature(object):
 
 
     def _fill_from_inspection_spec(self, types):
+        srcfun = self.function
+        while hasattr(srcfun, "__wrapped__"):
+            srcfun = srcfun.__wrapped__
         if hasattr(inspect, "getfullargspec"):
-            fspec = inspect.getfullargspec(self.function)
+            fspec = inspect.getfullargspec(srcfun)
         else:
-            fspec = inspect.getargspec(self.function)
+            fspec = inspect.getargspec(srcfun)
 
         if fspec.args:
             self._max_positional_args = len(fspec.args)
@@ -78,6 +81,12 @@ class Signature(object):
                         raise RuntimeError("`self` parameter must not be typed")
                 if arg in types:
                     p.type = types.pop(arg)
+                if fspec.annotations and arg in fspec.annotations:
+                    if p.type:
+                        raise RuntimeError(
+                            "Parameter `%s` should not have its type specified "
+                            "both in @typed() and in the annotations" % arg)
+                    p.type = fspec.annotations[arg]
                 self.params.append(p)
 
         if fspec.defaults:
@@ -117,6 +126,8 @@ class Signature(object):
 
         if "_return" in types:
             self.retval.type = types.pop("_return")
+        elif fspec.annotations and "return" in fspec.annotations:
+            self.retval.type = fspec.annotations["return"]
 
         if "_kwonly" in types:
             kwonly = types.pop("_kwonly")
@@ -329,6 +340,7 @@ class Parameter(object):
         self._checker = None
         self._default = None
         self._has_default = False
+        self._type = None
 
 
     @property

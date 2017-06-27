@@ -26,6 +26,17 @@ except ImportError:
 
 
 def checker_for_type(t):
+    """
+    Return "checker" function for the given type `t`.
+
+    This checker function will accept a single argument (of any type), and
+    return True if the argument matches type `t`, or False otherwise. For
+    example:
+
+        chkr = checker_for_type(int)
+        assert chkr.check(123) is True
+        assert chkr.check("5") is False
+    """
     try:
         if t is True: return true_checker
         if t is False: return false_checker
@@ -33,8 +44,8 @@ def checker_for_type(t):
         if checker is not None:
             return checker
         hashable = True
-    except Exception:
-        # Exception may be raised if `t` is not hashable
+    except TypeError:
+        # Exception may be raised if `t` is not hashable (e.g. a dict)
         hashable = False
 
     # The type checker needs to be created
