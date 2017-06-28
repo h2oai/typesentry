@@ -3,7 +3,7 @@ from __future__ import division, print_function
 
 import inspect
 
-from .checks import checker_for_type
+from .checks import checker_for_type, MagicType
 
 
 class Signature(object):
@@ -250,10 +250,19 @@ class Signature(object):
 
     def report_error(self, param, argname, argvalue):
         # argname may differ from `param.name` when it's a var-keyword argument
+        exptype = param.checker.name()
+        if param.kind == "VAR_POSITIONAL":
+            # pattern = ("Vararg parameter expected types `%s` but received a "
+            #            "value %s (of type %s)" % (exptype, ))
+            paramname = "Vararg parameter"
+        else:
+            # pattern = ("Parameter `%s` of type `%s` received value %s (of type "
+            #            "%s)" % (argname, exptype))
+            paramname = "Parameter `%s`" % argname
         tval = checker_for_type(type(argvalue)).name()
         raise self._tc.TypeError(
-            "Incorrect type for argument `%s`: expected %s got %s" %
-            (argname, param.checker.name(), tval)
+            "%s of type `%s` received value of type %s" %
+            (paramname, exptype, tval)
         )
 
     @property
@@ -326,7 +335,7 @@ class Parameter(object):
     }
 
     def __init__(self, name, kind="POSITIONAL_OR_KEYWORD"):
-        self._checker = None
+        self._checker = None  # type: MagicType
         self._default = None
         self._has_default = False
         self._type = None

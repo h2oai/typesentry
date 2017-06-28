@@ -69,8 +69,8 @@ def test_func_1arg0kws():
 
     with pytest.raises(TypeError) as e:
         foo("bar")
-    assert str(e.value) == "Incorrect type for argument `x`: expected " \
-                           "integer got string"
+    assert str(e.value) == ("Parameter `x` of type `int` received value "
+                            "of type str")
 
     with pytest.raises(TypeError) as e:
         foo(1, x=2)
@@ -98,9 +98,8 @@ def test_func_3args0kws():
 
     with pytest.raises(TypeError) as e:
         foo(x=[3], y=4, z="")
-    assert str(e.value) == "Incorrect type for argument `x`: expected integer "\
-                           "got list"
-
+    assert str(e.value) == ("Parameter `x` of type `int` received value "
+                            "of type list")
 
 def test_func_varargs():
     @typed(args=int)
@@ -113,8 +112,8 @@ def test_func_varargs():
 
     with pytest.raises(TypeError) as e:
         foo(1, 3, "bar")
-    assert str(e.value) == "Incorrect type for argument `*args`: expected " \
-                           "integer got string"
+    assert str(e.value) == ("Vararg parameter of type `int` received "
+                            "value of type str")
 
 
 
@@ -129,8 +128,8 @@ def test_func_varkws():
 
     with pytest.raises(TypeError) as e:
         foo(x=1, xx=3, xxx="bar")
-    assert str(e.value) == "Incorrect type for argument `xxx`: expected " \
-                           "numeric got string"
+    assert str(e.value) == ("Parameter `xxx` of type `numeric` received value "
+                            "of type str")
 
     with pytest.raises(TypeError) as e:
         foo(1, 2, x=10)
@@ -153,7 +152,7 @@ def test_return_value():
     with pytest.raises(TypeError) as e:
         bar("test")
     assert str(e.value) == "Incorrect return type in `bar()`: " \
-                           "expected integer got string"
+                           "expected int got str"
 
 
 
@@ -193,10 +192,8 @@ def test_wrapped_function():
     assert foo(5)
     with pytest.raises(TypeError) as e:
         foo("bar")
-    assert str(e.value) == ("Incorrect type for argument `x`: expected integer "
-                            "got string")
-
-
+    assert str(e.value) == ("Parameter `x` of type `int` received value "
+                            "of type str")
 
 
 @py3only
@@ -211,9 +208,8 @@ def test_function_with_signature():
     assert foo(1)  # noqa
     with pytest.raises(TypeError) as e:
         foo("oo")
-    assert str(e.value) == "Incorrect type for argument `x`: expected " \
-                           "integer got string"
-
+    assert str(e.value) == ("Parameter `x` of type `int` received value "
+                            "of type str")
     with pytest.raises(RuntimeError) as e:
         exec("@typed(x=str)\n"
              "def foo(x: int = None):\n"
@@ -235,5 +231,5 @@ def test_defaults():
 
     with pytest.raises(TypeError) as e:
         foo(x="")
-    assert str(e.value) == "Incorrect type for argument `x`: expected " \
-                           "integer got string"
+    assert str(e.value) == ("Parameter `x` of type `int` received value "
+                            "of type str")
