@@ -98,9 +98,9 @@ class Config(object):
     def _install_exception_hooks(self):
         previous_except_hook = sys.excepthook
 
+        # This function cannot be tested, becauses it can only be executed by
+        # the Python's console
         def except_hook(exc_type, exc_value, exc_tb):  # pragma: no cover
-            # This function cannot be tested, becauses it can only be executed
-            # by the Python's console
             if hasattr(exc_value, "_handle_"):
                 exc_value._handle_()
             else:

@@ -172,11 +172,39 @@ def test_bad_declaration():
     assert str(e.value) == "`self` parameter must not be typed"
 
 
+def test_wrapped_function():
+    import functools
+
+    def decorator(f):
+        @functools.wraps(f)
+        def decorated(*args):
+            print("Running f(%r)" % args)
+            return f(*args)
+        if not hasattr(decorated, "__wrapped__"):
+            decorated.__wrapped__ = f
+        return decorated
+
+    @typed(x=int)
+    @decorator
+    @decorator
+    def foo(x):
+        return True
+
+    assert foo(5)
+    with pytest.raises(TypeError) as e:
+        foo("bar")
+    assert str(e.value) == ("Incorrect type for argument `x`: expected integer "
+                            "got string")
+
+
+
 
 @py3only
 def test_function_with_signature():
+    # We have to use exec() here, otherwise it would be a syntax error on
+    # Python-2
     exec("@typed()\n"
-         "def foo(x: int = None):\n"
+         "def foo(x: int = None) -> bool:\n"
          "    return True\n", locals(), globals())
 
     assert foo()  # noqa
@@ -186,6 +214,12 @@ def test_function_with_signature():
     assert str(e.value) == "Incorrect type for argument `x`: expected " \
                            "integer got string"
 
+    with pytest.raises(RuntimeError) as e:
+        exec("@typed(x=str)\n"
+             "def foo(x: int = None):\n"
+             "    return True\n", locals(), globals())
+    assert str(e.value) == ("Parameter `x` should not have its type specified "
+                            "both in @typed() and in the annotations")
 
 
 def test_defaults():

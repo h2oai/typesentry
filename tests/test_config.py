@@ -7,7 +7,7 @@ from tests import typesentry
 def test_reporting():
     conf = typesentry.Config(soft_exceptions=True)
     TE = conf.TypeError
-    # VE = conf.ValueError
+    VE = conf.ValueError
     typed = conf.typed
 
     @typed(x=int)
@@ -19,6 +19,13 @@ def test_reporting():
         assert False, "Expected a failure above"
     except TE as e:
         assert str(type(e)) == "<class 'typesentry.config.TypeError'>"
+        e._handle_()
+
+    try:
+        raise VE("bad value")
+        assert False, "Expected a failure above"
+    except VE as e:
+        assert str(type(e)) == "<class 'typesentry.config.ValueError'>"
         e._handle_()
 
 
