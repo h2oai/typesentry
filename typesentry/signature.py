@@ -218,18 +218,12 @@ class Signature(object):
             for i, argvalue in enumerate(args):
                 param = self.params[i if i < self._max_positional_args else
                                     self._ivararg]
-                checker = param.checker
-                if not checker or checker.check(argvalue):
-                    continue
-                if param.has_default:
-                    dflt = param.default
-                    if argvalue is dflt or argvalue == dflt:
-                        continue
-                tval = checker_for_type(type(argvalue)).name()
-                raise self._tc.TypeError(
-                    "Incorrect type for argument `%s`: expected %s got %s" %
-                    (param.name, checker.name(), tval)
-                )
+                if param.checker and not (
+                    param.checker.check(argvalue) or
+                    param.has_default and
+                        (argvalue is param.default or argvalue == param.default)
+                ):
+                    self.report_error(param, param.name, argvalue)
 
             # Check types of keyword arguments
             for argname, argvalue in kws.items():
@@ -244,21 +238,23 @@ class Signature(object):
                         (self.name_bt, argname)
                     raise self._tc.TypeError(s)
                 param = self.params[index]
-                checker = param.checker
-                if not checker or checker.check(argvalue):
-                    continue
-                if param.has_default:
-                    dflt = param.default
-                    if argvalue is dflt or argvalue == dflt:
-                        continue
-                tval = checker_for_type(type(argvalue)).name()
-                raise self._tc.TypeError(
-                    "Incorrect type for argument `%s`: expected %s got %s" %
-                    (argname, checker.name(), tval)
-                )
+                if param.checker and not (
+                    param.checker.check(argvalue) or
+                    param.has_default and
+                        (argvalue is param.default or argvalue == param.default)
+                ):
+                    self.report_error(param, argname, argvalue)
 
         return _checker
 
+
+    def report_error(self, param, argname, argvalue):
+        # argname may differ from `param.name` when it's a var-keyword argument
+        tval = checker_for_type(type(argvalue)).name()
+        raise self._tc.TypeError(
+            "Incorrect type for argument `%s`: expected %s got %s" %
+            (argname, param.checker.name(), tval)
+        )
 
     @property
     def name_bt(self):
