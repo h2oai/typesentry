@@ -66,7 +66,7 @@ def _create_checker_for_type(t):
         if typing:
             if issubclass(t, typing.List) and t is not list:
                 itemtype = t.__args__ and t.__args__[0]
-                if itemtype:
+                if itemtype and itemtype is not typing.Any:
                     return ListChecker(itemtype)
                 else:
                     return ClassChecker(list, name="List")
@@ -83,6 +83,13 @@ def _create_checker_for_type(t):
                     return TupleChecker(t.__tuple_params__[0], Ellipsis)
                 else:
                     return TupleChecker(*t.__tuple_params__)
+            if issubclass(t, typing.Set) and t is not set:
+                itemtype = t.__args__ and t.__args__[0]
+                if itemtype and itemtype is not typing.Any:
+                    return SetChecker(itemtype)
+                else:
+                    return ClassChecker(set, name="Set")
+
         # `t` is a name of the class, or a built-in type such as
         # `list, `tuple`, etc
         return ClassChecker(t)
@@ -141,7 +148,7 @@ class MagicType(object):
 
         The default implementation of this function returns only 0 or 1.
         """
-        return 1 if self.check(var) else 0
+        return int(self.check(var))
 
 
 class Any(MagicType):
@@ -154,14 +161,14 @@ class Any(MagicType):
 
 class ClassChecker(MagicType):
     def __init__(self, cls, name=None):
-        self.cls = cls
+        self._cls = cls
         self._name = name
 
     def check(self, v):
-        return isinstance(v, self.cls)
+        return isinstance(v, self._cls)
 
     def name(self):
-        return self._name or self.cls.__name__
+        return self._name or self._cls.__name__
 
 
 
@@ -182,7 +189,7 @@ class BoolChecker(MagicType):
         return isinstance(v, bool)
 
     def name(self):
-        return "boolean"
+        return "bool"
 
 
 class IntChecker(MagicType):
@@ -190,7 +197,7 @@ class IntChecker(MagicType):
         return isinstance(v, _int_type) and not isinstance(v, bool)
 
     def name(self):
-        return "integer"
+        return "int"
 
 
 class FloatChecker(MagicType):
@@ -214,7 +221,7 @@ class StrChecker(MagicType):
         return isinstance(v, _str_type)
 
     def name(self):
-        return "string"
+        return "str"
 
 
 class LiteralChecker(MagicType):
