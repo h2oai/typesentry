@@ -216,55 +216,48 @@ class Signature(object):
 
             # Check types of positional arguments
             for i, argvalue in enumerate(args):
-                self._check_positional_arg(i, argvalue)
+                param = self.params[i if i < self._max_positional_args else
+                                    self._ivararg]
+                checker = param.checker
+                if not checker or checker.check(argvalue):
+                    continue
+                if param.has_default:
+                    dflt = param.default
+                    if argvalue is dflt or argvalue == dflt:
+                        continue
+                tval = checker_for_type(type(argvalue)).name()
+                raise self._tc.TypeError(
+                    "Incorrect type for argument `%s`: expected %s got %s" %
+                    (param.name, checker.name(), tval)
+                )
 
             # Check types of keyword arguments
             for argname, argvalue in kws.items():
                 argindex = self._iargs.get(argname)
                 if argindex is not None and argindex < nargs:
                     raise self._repeating_arg_error(argname)
-                self._check_keyword_arg(argname, argvalue)
+                index = self._iargs.get(argname)
+                if index is None:
+                    index = self._ivarkws
+                if index is None:
+                    s = "%s got an unexpected keyword argument `%s`" % \
+                        (self.name_bt, argname)
+                    raise self._tc.TypeError(s)
+                param = self.params[index]
+                checker = param.checker
+                if not checker or checker.check(argvalue):
+                    continue
+                if param.has_default:
+                    dflt = param.default
+                    if argvalue is dflt or argvalue == dflt:
+                        continue
+                tval = checker_for_type(type(argvalue)).name()
+                raise self._tc.TypeError(
+                    "Incorrect type for argument `%s`: expected %s got %s" %
+                    (argname, checker.name(), tval)
+                )
 
         return _checker
-
-
-    def _check_positional_arg(self, index, value):
-        if index < self._max_positional_args:
-            param = self.params[index]
-            argname = param.name
-        else:
-            assert self._ivararg is not None
-            param = self.params[self._ivararg]
-            argname = "*" + param.name
-        self._check_arg(param, argname, value)
-
-
-    def _check_keyword_arg(self, name, value):
-        index = self._iargs.get(name)
-        if index is None:
-            index = self._ivarkws
-        if index is None:
-            s = "%s got an unexpected keyword argument `%s`" % \
-                (self.name_bt, name)
-            raise self._tc.TypeError(s)
-        self._check_arg(self.params[index], name, value)
-
-
-    def _check_arg(self, param, name, value):
-        checker = param.checker
-        if not checker:
-            return
-        if checker.check(value):
-            return
-        if param.has_default:
-            dflt = param.default
-            if value is dflt or value == dflt:
-                return
-        tval = checker_for_type(type(value)).name()
-        raise self._tc.TypeError(
-            "Incorrect type for argument `%s`: expected %s got %s" %
-            (name, checker.name(), tval)
-        )
 
 
     @property
@@ -337,12 +330,14 @@ class Parameter(object):
     }
 
     def __init__(self, name, kind="POSITIONAL_OR_KEYWORD"):
-        self.name = name
-        self.kind = kind
         self._checker = None
         self._default = None
         self._has_default = False
         self._type = None
+        self.kind = kind
+        self.name = name
+        if kind == "VAR_POSITIONAL":
+            self.name = "*" + name
 
 
     @property
