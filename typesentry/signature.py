@@ -223,7 +223,7 @@ class Signature(object):
                     param.has_default and
                         (argvalue is param.default or argvalue == param.default)
                 ):
-                    self.report_error(param, param.name, argvalue)
+                    raise self._param_type_error(param, param.name, argvalue)
 
             # Check types of keyword arguments
             for argname, argvalue in kws.items():
@@ -243,32 +243,14 @@ class Signature(object):
                     param.has_default and
                         (argvalue is param.default or argvalue == param.default)
                 ):
-                    self.report_error(param, argname, argvalue)
+                    raise self._param_type_error(param, argname, argvalue)
 
         return _checker
 
 
-    def report_error(self, param, argname, argvalue):
-        # argname may differ from `param.name` when it's a var-keyword argument
-        exptype = param.checker.name()
-        if param.kind == "VAR_POSITIONAL":
-            # pattern = ("Vararg parameter expected types `%s` but received a "
-            #            "value %s (of type %s)" % (exptype, ))
-            paramname = "Vararg parameter"
-        else:
-            # pattern = ("Parameter `%s` of type `%s` received value %s (of type "
-            #            "%s)" % (argname, exptype))
-            paramname = "Parameter `%s`" % argname
-        tval = checker_for_type(type(argvalue)).name()
-        raise self._tc.TypeError(
-            "%s of type `%s` received value of type %s" %
-            (paramname, exptype, tval)
-        )
-
     @property
     def name_bt(self):
         return "`%s()`" % self.function.__name__
-
 
 
     def _too_many_args_error(self, num_args):
@@ -306,6 +288,13 @@ class Signature(object):
         return self._tc.TypeError(s)
 
 
+    def _param_type_error(self, param, argname, argvalue):
+        paramname = "Vararg parameter" if param.kind == "VAR_POSITIONAL" else \
+                    "Parameter `%s`" % argname
+        msg = param.checker.get_error_msg(paramname, argvalue)
+        return self._tc.TypeError(msg)
+
+
     def __repr__(self):
         return ("<typesentry.Signature(%s) minpos=%d maxpos=%d ivararg=%r "
                 "ivarkws=%r self=%d reqkwonly={%s} params=[%s]>" %
@@ -318,7 +307,9 @@ class Signature(object):
                  ", ".join(repr(p) for p in self.params)))
 
 
-
+# ------------------------------------------------------------------------------
+# Parameter
+# ------------------------------------------------------------------------------
 
 class Parameter(object):
     """

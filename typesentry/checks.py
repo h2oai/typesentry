@@ -150,6 +150,27 @@ class MagicType(object):
         """
         return int(self.check(var))
 
+    def get_error_msg(self, paramname, value):
+        """
+        Return message for the type error that should be emitted when the
+        `value` fails typecheck for this type.
+
+        The base class has reasonably good implementation of this method, so
+        subclasses are not required to override it. However sometimes a class
+        may implement this method in order to show custom error messages
+        (especially related to fuzzy checking).
+
+        :param paramname: "full" name of the parameter that holds the value;
+            this will look either like "Parameter `foo`", or "Vararg parameter"
+        :param value: the value that failed typecheck. The class may assume
+            that this value is such that `self.check(value) is False`.
+        :returns: a string containing error message for a TypeError exception.
+        """
+        tval = checker_for_type(type(value)).name()
+        return "%s of type `%s` received value of type %s" \
+               % (paramname, self.name(), tval)
+
+
 
 class Any(MagicType):
     def check(self, v):
