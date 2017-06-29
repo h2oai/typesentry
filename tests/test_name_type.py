@@ -18,7 +18,7 @@ def test_simple():
     assert name_type(str) == "str"
     assert name_type(None) == "None"
     assert name_type(bool) == "bool"
-    assert name_type(float) == "numeric"
+    assert name_type(float) == "float"
     assert name_type(0) == "0"
     assert name_type(1) == "1"
     assert name_type(123) == "123"
@@ -37,7 +37,7 @@ def test_composites():
     assert name_type(U(1, 2, 3)) == "1 | 2 | 3"
     assert name_type(U(False, 0, "")) == 'False | 0 | ""'
     assert name_type(U(int, None)) == "?int"
-    assert name_type(U(None, float)) == "?numeric"
+    assert name_type(U(None, float)) == "?float"
     assert name_type(I(int, str)) == "int & str"
     assert name_type(I(int)) == "int"
     assert name_type(I(int, NOT(0))) == "int & !0"

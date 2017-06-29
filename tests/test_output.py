@@ -5,24 +5,6 @@ from tests import typed, TTypeError
 import random
 import pytest
 
-@typed()
-def foo(x):
-    raise RuntimeError
-
-
-def do(st):
-    argname = "".join(chr(random.randint(ord('a'), ord('z'))) for _ in range(6))
-    exec("@typed({arg}={type})\n"
-         "def foo({arg}=None):\n"
-         "    return True\n".format(arg=argname, type=st),
-         locals(), globals())
-    for x in [None, random.randint(0, 10000), "zooka", (1, 3),
-              [1, 5, 6], {"a"}, [3, 4, "b"],
-              [999, .5, "`parampampam`", (1, 7), range(100), b"varrava"]]:
-        try:
-            foo(x)
-        except TTypeError as e:
-            e._handle_()
 
 def assert_error(fn, arg, err):
     with pytest.raises(TTypeError) as e:
@@ -30,11 +12,28 @@ def assert_error(fn, arg, err):
         assert False, "Error %r was expected" % err
     assert err in str(e.value)
 
+
+
 def test_output():
+    def do(st, args):
+        @typed(monty=st)
+        def foo(monty):
+            return True
+
+        for x in args:
+            try:
+                assert foo(x)
+            except TTypeError as e:
+                e._handle_()
+
     print()
-    do("int")
-    do("str")
-    do("[int, str]")
+    list0 = [None, random.randint(0, 10000), "zooka", (1, 3),
+             [1, 5, 6], {"a"}, [3, 4, "b"],
+             [999, .5, "`parampampam`", (1, 7), range(100), b"varrava"]]
+    do("int", list0)
+    do("str", list0)
+    do("[int, str]", list0)
+
 
 
 def test_list_errors():
@@ -46,7 +45,7 @@ def test_list_errors():
     assert foo1([0])
     assert foo1(list(range(100)))
     assert_error(foo1, {"bar"}, "Parameter `x` of type `List[int]` received "
-                                "value {'bar'} of type set")
+                                "value %r of type set" % {"bar"})
     assert_error(foo1, ["bar"], "Parameter `x` of type `List[int]` received a "
                                 "list where 1st element is 'bar' of type str")
     assert_error(foo1, [1, None, -1, 0], "2nd element is None")

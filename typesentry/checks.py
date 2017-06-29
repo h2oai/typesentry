@@ -69,13 +69,13 @@ def _create_checker_for_type(t):
                 if itemtype and itemtype is not typing.Any:
                     return ListChecker(itemtype)
                 else:
-                    return ClassChecker(list, name="List")
+                    return MtClass(list, name="List")
             if issubclass(t, typing.Dict) and t is not dict:
                 if t.__args__:
                     key, value = t.__args__
                     return checker_for_type({key: value})
                 else:
-                    return ClassChecker(dict)
+                    return MtClass(dict)
             if issubclass(t, typing.Tuple) and t is not tuple:
                 tlen = len(t.__tuple_params__)
                 if t.__tuple_use_ellipsis__:
@@ -88,14 +88,14 @@ def _create_checker_for_type(t):
                 if itemtype and itemtype is not typing.Any:
                     return SetChecker(itemtype)
                 else:
-                    return ClassChecker(set, name="Set")
+                    return MtClass(set, name="Set")
 
         # `t` is a name of the class, or a built-in type such as
         # `list, `tuple`, etc
-        return ClassChecker(t)
+        return MtClass(t)
     if typing:
         if t is typing.Any:
-            return Any()
+            return MtAny()
         if type(t) is type(typing.Union):  # flake8: disable=E721
             try:
                 return U(*t.__union_params__)
@@ -171,7 +171,7 @@ class MagicType(object):
 
 
 
-class Any(MagicType):
+class MtAny(MagicType):
     def check(self, v):
         return True
 
@@ -179,7 +179,7 @@ class Any(MagicType):
         return "Any"
 
 
-class ClassChecker(MagicType):
+class MtClass(MagicType):
     def __init__(self, cls, name=None):
         self._cls = cls
         self._name = name or cls.__name__
@@ -196,7 +196,7 @@ class ClassChecker(MagicType):
 # Checkers for primitive types
 #-------------------------------------------------------------------------------
 
-class NoneChecker(MagicType):
+class MtNone(MagicType):
     def check(self, v):
         return v is None
 
@@ -204,23 +204,23 @@ class NoneChecker(MagicType):
         return "None"
 
 
-class BoolChecker(MagicType):
+class MtBool(MagicType):
     def check(self, v):
-        return isinstance(v, bool)
+        return v is True or v is False
 
     def name(self):
         return "bool"
 
 
-class IntChecker(MagicType):
+class MtInt(MagicType):
     def check(self, v):
-        return isinstance(v, _int_type) and not isinstance(v, bool)
+        return isinstance(v, _int_type) and v is not True and v is not False
 
     def name(self):
         return "int"
 
 
-class FloatChecker(MagicType):
+class MtFloat(MagicType):
     """
     Float type has the semantic of "numeric", i.e. it maches both floats and
     integers (see PEP-0484).
@@ -229,7 +229,7 @@ class FloatChecker(MagicType):
         return isinstance(v, _num_type) and not isinstance(v, bool)
 
     def name(self):
-        return "numeric"
+        return "float"
 
 
 class StrChecker(MagicType):
@@ -444,13 +444,12 @@ class NOT(MagicType):
 #-------------------------------------------------------------------------------
 
 memoized_type_checkers = {
-    None: NoneChecker(),
-    type(None): NoneChecker(),
-    bool: BoolChecker(),
-    int: IntChecker(),
-    float: FloatChecker(),
+    None: MtNone(),
+    type(None): MtNone(),
+    bool: MtBool(),
+    int: MtInt(),
+    float: MtFloat(),
     str: StrChecker(),
-    Any: Any(),
 }
 
 true_checker = LiteralChecker(True)

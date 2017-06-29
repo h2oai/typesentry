@@ -128,7 +128,7 @@ def test_func_varkws():
 
     with pytest.raises(TTypeError) as e:
         foo(x=1, xx=3, xxx="bar")
-    assert str(e.value) == ("Parameter `xxx` of type `numeric` received value "
+    assert str(e.value) == ("Parameter `xxx` of type `float` received value "
                             "'bar' of type str")
 
     with pytest.raises(TTypeError) as e:
