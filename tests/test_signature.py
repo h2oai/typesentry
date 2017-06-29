@@ -2,7 +2,7 @@
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 import pytest
 import time
-from tests import typed, py3only, TypeError
+from tests import typed, py3only, TTypeError
 
 
 def test_func_0args0kws():
@@ -12,19 +12,19 @@ def test_func_0args0kws():
 
     assert foo()
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(1)
     assert str(e.value) == "`foo()` doesn't take any arguments"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(1, 2, 3)
     assert str(e.value) == "`foo()` doesn't take any arguments"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(w=1)
     assert str(e.value) == "`foo()` got an unexpected keyword argument `w`"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(1, q=2)
     assert str(e.value) == "`foo()` doesn't take any arguments"
 
@@ -39,11 +39,11 @@ def test_method_noargs():
     foo = Foo()
     assert foo.bar()
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo.bar(1)
     assert str(e.value) == "`bar()` doesn't take any arguments"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo.bar(ww=1)
     assert str(e.value) == "`bar()` got an unexpected keyword argument `ww`"
 
@@ -58,21 +58,21 @@ def test_func_1arg0kws():
     assert foo(1)
     assert foo(x=15)
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo()
     assert str(e.value) == "`foo()` missing 1 required positional argument `x`"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(1, 2, 3)
     assert str(e.value) == "`foo()` takes 1 positional argument but 3 were " \
                            "given"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo("bar")
     assert str(e.value) == ("Parameter `x` of type `int` received value 'bar' "
                             "of type str")
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(1, x=2)
     assert str(e.value) == "`foo()` got multiple values for argument `x`"
 
@@ -86,17 +86,17 @@ def test_func_3args0kws():
     assert foo(1, 2, "bar")
     assert foo(z="reverse", x=7, y=0.001)
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo()
     assert str(e.value) == "`foo()` missing 3 required positional arguments: "\
                            "`x`, `y` and `z`"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(y=0)
     assert str(e.value) == "`foo()` missing 2 required positional arguments: "\
                            "`x` and `z`"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(x=[3], y=4, z="")
     assert str(e.value) == ("Parameter `x` of type `int` received value [3] "
                             "of type list")
@@ -110,7 +110,7 @@ def test_func_varargs():
     assert foo(1) == 1
     assert foo(1, 2, 3, 4, 5) == 15
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(1, 3, "bar")
     assert str(e.value) == ("Vararg parameter of type `int` received "
                             "value 'bar' of type str")
@@ -126,12 +126,12 @@ def test_func_varkws():
     assert foo(x=1) == 1
     assert foo(x=1, y=3.3, z=0.7) == 5
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(x=1, xx=3, xxx="bar")
     assert str(e.value) == ("Parameter `xxx` of type `numeric` received value "
                             "'bar' of type str")
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(1, 2, x=10)
     assert str(e.value) == "`foo()` accepts only keyword arguments"
 
@@ -149,7 +149,7 @@ def test_return_value():
     assert foo() > 0
     assert bar(1) == 1
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         bar("test")
     assert str(e.value) == "Incorrect return type in `bar()`: " \
                            "expected int got str"
@@ -190,7 +190,7 @@ def test_wrapped_function():
         return True
 
     assert foo(5)
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo("bar")
     assert str(e.value) == ("Parameter `x` of type `int` received value 'bar' "
                             "of type str")
@@ -206,7 +206,7 @@ def test_function_with_signature():
 
     assert foo()  # noqa
     assert foo(1)  # noqa
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo("oo")
     assert str(e.value) == ("Parameter `x` of type `int` received value 'oo' "
                             "of type str")
@@ -229,7 +229,7 @@ def test_defaults():
     assert foo(x=10)
     assert foo(x=None)
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(x="")
     assert str(e.value) == ("Parameter `x` of type `int` received value '' "
                             "of type str")

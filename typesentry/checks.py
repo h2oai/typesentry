@@ -166,9 +166,8 @@ class MagicType(object):
             that this value is such that `self.check(value) is False`.
         :returns: a string containing error message for a TypeError exception.
         """
-        tval = checker_for_type(type(value)).name()
-        return "%s of type `%s` received value %s of type %s" \
-               % (paramname, self.name(), _prepare_value(value), tval)
+        return ("%s of type `%s` received value %s"
+                % (paramname, self.name(), _prepare_value(value)))
 
 
 
@@ -183,13 +182,13 @@ class Any(MagicType):
 class ClassChecker(MagicType):
     def __init__(self, cls, name=None):
         self._cls = cls
-        self._name = name
+        self._name = name or cls.__name__
 
     def check(self, v):
         return isinstance(v, self._cls)
 
     def name(self):
-        return self._name or self._cls.__name__
+        return self._name
 
 
 
@@ -283,6 +282,24 @@ class ListChecker(MagicType):
         if len(v) == 0: return 1
         c = self._elem
         return sum(c.fuzzycheck(x) for x in v) / len(v)
+
+    def get_error_msg(self, paramname, value):
+        if isinstance(value, list):
+            elemchecker = self._elem.check
+            ibad = -1
+            for i, x in enumerate(value):
+                if not elemchecker(x):
+                    ibad = i + 1
+                    break
+            nth = ("%dst" if (ibad % 10 == 1 and ibad % 100 != 11) else
+                   "%dnd" if (ibad % 10 == 2 and ibad % 100 != 12) else
+                   "%drd" if (ibad % 10 == 3 and ibad % 100 != 13) else
+                   "%dth") % ibad
+            sval = _prepare_value(value[ibad - 1])
+            return ("%s of type `%s` received a list where %s element is %s"
+                    % (paramname, self.name(), nth, sval))
+        else:
+            return super(ListChecker, self).get_error_msg(paramname, value)
 
 
 
@@ -444,8 +461,11 @@ def _prepare_value(val, maxlen=50):
     """
     Stringify value `val`, ensuring that it is not too long.
     """
+    if val is None or val is True or val is False:
+        return str(val)
     sval = repr(val)
     sval = sval.replace("\n", " ").replace("\t", " ").replace("`", "'")
     if len(sval) > maxlen:
         sval = sval[:maxlen - 4] + "..." + sval[-1]
-    return sval
+    tval = checker_for_type(type(val)).name()
+    return "%s of type %s" % (sval, tval)

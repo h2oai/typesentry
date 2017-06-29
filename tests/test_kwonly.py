@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 import pytest
-from tests import typed, py3only, TypeError
+from tests import typed, py3only, TTypeError
 
 foo = 1
 bar = 2
@@ -16,11 +16,11 @@ def test_kwonly1():
     assert foo(x=1, y=2)
     assert foo(y="spam", x="ham")
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(1, 2)
     assert str(e.value) == "`foo()` accepts only keyword arguments"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         foo(1, y=2)
     assert str(e.value) == "`foo()` accepts only keyword arguments"
 
@@ -34,21 +34,21 @@ def test_kwonly2():
     assert bar(x=3, y=4)
     assert bar(3, y=7)
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         assert bar._signature_._max_positional_args == 1
         assert bar._signature_._min_positional_args == 1
         bar(1, x=2)
     assert str(e.value) == "`bar()` missing 1 required keyword argument `y`"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         bar(1)
     assert str(e.value) == "`bar()` missing 1 required keyword argument `y`"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         bar(1, smth=2)
     assert str(e.value) == "`bar()` missing 1 required keyword argument `y`"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         bar(1, 2)
     assert str(e.value) == "`bar()` takes 1 positional argument but 2 " \
                            "were given"
@@ -63,16 +63,16 @@ def test_kwonly3():
     assert baz(1, 2, c=3, d=44)
     assert baz(1, 2, c=3)
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         baz(1, 2, 3, 4)
     assert str(e.value) == "`baz()` takes 2 positional arguments but 4 " \
                            "were given"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         baz(1, 2, d=5)
     assert str(e.value) == "`baz()` missing 1 required keyword argument `c`"
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TTypeError) as e:
         # assert baz._signature_._min_positional_args == 2
         baz(1, c=2, d=5)
     assert str(e.value) == "`baz()` missing 1 required positional argument `b`"

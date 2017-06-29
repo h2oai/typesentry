@@ -13,8 +13,8 @@ _tc = typesentry.Config()
 typed = _tc.typed
 is_type = _tc.is_type
 name_type = _tc.name_type
-TypeError = _tc.TypeError
-ValueError = _tc.ValueError
+TTypeError = _tc.TypeError
+TValueError = _tc.ValueError
 
 
 #------ pytest fixtures --------------------------------------------------------
@@ -23,5 +23,5 @@ py3only = pytest.mark.skipif(sys.version_info < (3, 5),
                              reason="at least mymodule-1.1 required")
 
 
-__all__ = ("is_type", "name_type", "typed", "TypeError", "ValueError",
+__all__ = ("is_type", "name_type", "typed", "TTypeError", "TValueError",
            "py3only", "U", "I", "NOT", "MagicType")
