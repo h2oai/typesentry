@@ -13,7 +13,7 @@ if PY2:
     _num_type = (int, long, float)  # noqa
     _primitive_type = (str, int, float, bool, unicode, long)  # noqa
 else:
-    _str_type = (str, bytes)
+    _str_type = str
     _int_type = int
     _num_type = (int, float)
     _primitive_type = (str, int, float, bool, bytes)
@@ -235,7 +235,7 @@ class MtFloat(MagicType):
 class StrChecker(MagicType):
     """
     On Python2 we treat both `str` and `unicode` as matching this type; on
-    Python3 both `str` and `bytes` match this type.
+    Python3 only `str` (not `bytes`) match this type.
     """
     def check(self, v):
         return isinstance(v, _str_type)

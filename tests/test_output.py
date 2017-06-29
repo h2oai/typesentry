@@ -30,9 +30,10 @@ def test_output():
     list0 = [None, random.randint(0, 10000), "zooka", (1, 3),
              [1, 5, 6], {"a"}, [3, 4, "b"],
              [999, .5, "`parampampam`", (1, 7), range(100), b"varrava"]]
-    do("int", list0)
-    do("str", list0)
-    do("[int, str]", list0)
+    do(int, list0)
+    do(str, list0)
+    do([int, str], list0)
+    do(bytes, ["hi", b"there"])
 
 
 
