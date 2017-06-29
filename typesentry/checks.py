@@ -114,9 +114,9 @@ def _create_checker_for_type(t):
 
 
 
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Basic types
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 class MagicType(object):
     """Base class for all "special" types."""
@@ -167,8 +167,8 @@ class MagicType(object):
         :returns: a string containing error message for a TypeError exception.
         """
         tval = checker_for_type(type(value)).name()
-        return "%s of type `%s` received value of type %s" \
-               % (paramname, self.name(), tval)
+        return "%s of type `%s` received value %s of type %s" \
+               % (paramname, self.name(), _prepare_value(value), tval)
 
 
 
@@ -438,3 +438,14 @@ memoized_type_checkers = {
 
 true_checker = LiteralChecker(True)
 false_checker = LiteralChecker(False)
+
+
+def _prepare_value(val, maxlen=50):
+    """
+    Stringify value `val`, ensuring that it is not too long.
+    """
+    sval = repr(val)
+    sval = sval.replace("\n", " ").replace("\t", " ").replace("`", "'")
+    if len(sval) > maxlen:
+        sval = sval[:maxlen - 4] + "..." + sval[-1]
+    return sval
