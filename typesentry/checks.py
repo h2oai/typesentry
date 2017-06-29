@@ -57,7 +57,7 @@ def checker_for_type(t):
 
 def _create_checker_for_type(t):
     if isinstance(t, _primitive_type):
-        return LiteralChecker(t)
+        return MtLiteral(t)
     if isinstance(t, MagicType):
         return t
     if isinstance(t, type):
@@ -67,7 +67,7 @@ def _create_checker_for_type(t):
             if issubclass(t, typing.List) and t is not list:
                 itemtype = t.__args__ and t.__args__[0]
                 if itemtype and itemtype is not typing.Any:
-                    return ListChecker(itemtype)
+                    return MtList(itemtype)
                 else:
                     return MtClass(list, name="List")
             if issubclass(t, typing.Dict) and t is not dict:
@@ -80,13 +80,13 @@ def _create_checker_for_type(t):
                 tlen = len(t.__tuple_params__)
                 if t.__tuple_use_ellipsis__:
                     assert tlen == 1
-                    return TupleChecker(t.__tuple_params__[0], Ellipsis)
+                    return MtTuple(t.__tuple_params__[0], Ellipsis)
                 else:
-                    return TupleChecker(*t.__tuple_params__)
+                    return MtTuple(*t.__tuple_params__)
             if issubclass(t, typing.Set) and t is not set:
                 itemtype = t.__args__ and t.__args__[0]
                 if itemtype and itemtype is not typing.Any:
-                    return SetChecker(itemtype)
+                    return MtSet(itemtype)
                 else:
                     return MtClass(set, name="Set")
 
@@ -102,14 +102,14 @@ def _create_checker_for_type(t):
             except AttributeError:
                 return U(*t.__args__)
     if isinstance(t, list):
-        # `t` is a list literal
-        return ListChecker(U(*t))
+        # `t` is a list literal, such as [int, str]
+        return MtList(U(*t))
     if isinstance(t, set):
-        return SetChecker(U(*t))
+        return MtSet(U(*t))
     if isinstance(t, tuple):
-        return TupleChecker(*t)
+        return MtTuple(*t)
     if isinstance(t, dict):
-        return DictChecker(t)
+        return MtDict(t)
     raise RuntimeError("Unknown type %r for type-checker" % t)
 
 
@@ -232,7 +232,7 @@ class MtFloat(MagicType):
         return "float"
 
 
-class StrChecker(MagicType):
+class MtStr(MagicType):
     """
     On Python2 we treat both `str` and `unicode` as matching this type; on
     Python3 only `str` (not `bytes`) match this type.
@@ -244,7 +244,7 @@ class StrChecker(MagicType):
         return "str"
 
 
-class LiteralChecker(MagicType):
+class MtLiteral(MagicType):
     def __init__(self, literal):
         self.literal = literal
 
@@ -266,7 +266,7 @@ class LiteralChecker(MagicType):
 # Checkers for collection types
 #-------------------------------------------------------------------------------
 
-class ListChecker(MagicType):
+class MtList(MagicType):
     def __init__(self, elem_type):
         self._elem = checker_for_type(elem_type)
 
@@ -299,11 +299,11 @@ class ListChecker(MagicType):
             return ("%s of type `%s` received a list where %s element is %s"
                     % (paramname, self.name(), nth, sval))
         else:
-            return super(ListChecker, self).get_error_msg(paramname, value)
+            return super(MtList, self).get_error_msg(paramname, value)
 
 
 
-class SetChecker(MagicType):
+class MtSet(MagicType):
     def __init__(self, elem_type):
         self._elem = checker_for_type(elem_type)
 
@@ -322,7 +322,7 @@ class SetChecker(MagicType):
 
 
 
-class TupleChecker(MagicType):
+class MtTuple(MagicType):
     def __init__(self, *items):
         if len(items) >= 2 and items[-1] is Ellipsis:
             # Variable-length tuple whose last element has type `_last`
@@ -353,7 +353,7 @@ class TupleChecker(MagicType):
             return "Tuple[" + ", ".join(ch.name() for ch in self._checks) + "]"
 
 
-class DictChecker(MagicType):
+class MtDict(MagicType):
     def __init__(self, kvs):
         self._checks = [(checker_for_type(k), checker_for_type(v))
                         for k, v in kvs.items()]
@@ -449,11 +449,11 @@ memoized_type_checkers = {
     bool: MtBool(),
     int: MtInt(),
     float: MtFloat(),
-    str: StrChecker(),
+    str: MtStr(),
 }
 
-true_checker = LiteralChecker(True)
-false_checker = LiteralChecker(False)
+true_checker = MtLiteral(True)
+false_checker = MtLiteral(False)
 
 
 def _prepare_value(val, maxlen=50):

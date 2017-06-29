@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 import pytest
-from tests import is_type, py3only, U, I, NOT
+from tests import is_type, py3only, PY3, U, I, NOT
 
 
 def test_literals():
@@ -31,7 +31,8 @@ def test_primitives():
     assert is_type("hello", str)
     assert is_type(u"hello", str)
     assert is_type(b"hello", bytes)
-    assert not is_type(b"hello", str)
+    if PY3:
+        assert not is_type(b"hello", str)
     assert not is_type(1, bool)
     assert not is_type(1, str)
     assert not is_type(1.1, int)

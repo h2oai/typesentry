@@ -21,7 +21,7 @@ TValueError = _tc.ValueError
 
 py3only = pytest.mark.skipif(sys.version_info < (3, 5),
                              reason="at least mymodule-1.1 required")
-
+PY3 = sys.version_info > (3, )
 
 __all__ = ("is_type", "name_type", "typed", "TTypeError", "TValueError",
-           "py3only", "U", "I", "NOT", "MagicType")
+           "py3only", "U", "I", "NOT", "MagicType", "PY3")
