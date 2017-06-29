@@ -3,6 +3,7 @@
 from __future__ import division, print_function
 
 import sys
+import re
 
 
 PY2 = sys.version_info[0] == 2
@@ -267,6 +268,13 @@ class MtLiteral(MagicType):
 #-------------------------------------------------------------------------------
 
 class MtList(MagicType):
+    """
+    MagicType corresponding to `List[T]`.
+
+    This type constructs special error message in the case it is matched against
+    a list where some of the elements are `T` while others are not `T`.
+    """
+
     def __init__(self, elem_type):
         self._elem = checker_for_type(elem_type)
 
@@ -323,6 +331,12 @@ class MtSet(MagicType):
 
 
 class MtTuple(MagicType):
+    """
+    MagicType corresponding to either `Tuple[T1, …, Tn]` (tuple with fixed
+    number of entries) or `Tuple[T1, …, Tn, ...]` (tuple where the last entry
+    may be repeated multiple times and have the same type `Tn`).
+    """
+
     def __init__(self, *items):
         if len(items) >= 2 and items[-1] is Ellipsis:
             # Variable-length tuple whose last element has type `_last`
@@ -334,15 +348,15 @@ class MtTuple(MagicType):
             self._last = None
 
     def check(self, v):
-        n = len(self._checks)
-        if self._last:
+        if self._last:  # variable-length tuple
+            last_checker = self._last.check
             return (isinstance(v, tuple) and
-                    len(v) >= n and
+                    len(v) >= len(self._checks) and
                     all(c.check(v[i]) for i, c in enumerate(self._checks)) and
-                    all(self._last.check(elem) for elem in v[n:]))
-        else:
+                    all(last_checker(elem) for elem in v[len(self._checks):]))
+        else:  # fixed-length tuple
             return (isinstance(v, tuple) and
-                    len(v) == n and
+                    len(v) == len(self._checks) and
                     all(c.check(v[i]) for i, c in enumerate(self._checks)))
 
     def name(self):
@@ -351,6 +365,7 @@ class MtTuple(MagicType):
             return "Tuple[" + ", ".join([first, self._last.name(), "..."]) + "]"
         else:
             return "Tuple[" + ", ".join(ch.name() for ch in self._checks) + "]"
+
 
 
 class MtDict(MagicType):
@@ -380,6 +395,13 @@ class U(MagicType):
 
     We say that ``x`` is of type ``U(type1, ..., typeN)`` if type of ``x`` is
     one of ``type1``, ..., or ``typeN``.
+
+    Construction of error message for this type relies on the "fuzzy-checking"
+    mechanism. In particular we find the best fuzzy-matched type among all
+    constituent types of the union, and use that element's error message. For
+    example, if type T is a union `Union[int, str, List[int], List[str]]` and
+    the value `[0, 1, "a"]` is supplied, then the error message will be
+    displayed as if T was `List[int]`.
     """
 
     def __init__(self, *types):
@@ -389,6 +411,9 @@ class U(MagicType):
     def check(self, var):
         return any(c.check(var) for c in self._checkers)
 
+    def fuzzycheck(self, v):
+        return max(c.fuzzycheck(v) for c in self._checkers)
+
     def name(self):
         res = [c.name() for c in self._checkers]
         if len(res) == 2 and "None" in res:
@@ -396,6 +421,21 @@ class U(MagicType):
             return "?" + res[0]
         else:
             return " | ".join(res)
+
+    def get_error_msg(self, paramname, value):
+        best = max(self._checkers, key=lambda c: c.fuzzycheck(value))
+        bestscore = best.fuzzycheck(value)
+        if bestscore > 0:
+            msg = best.get_error_msg(paramname, value)
+            # Slightly modify the message, to hint that the provided type is not
+            # THE type of the argument, but just one of its possible types
+            mm = re.match(r"^(.*) of type (`[^`]+`) received ?a? ?(.*)$", msg)
+            if mm:
+                msg = ("%s expects type %s but received a %s" % mm.groups())
+            return msg
+        else:
+            return super(U, self).get_error_msg(paramname, value)
+
 
 
 class I(MagicType):

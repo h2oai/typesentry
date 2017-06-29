@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 from __future__ import division, print_function
-from tests import typed, TTypeError
+from tests import typed, TTypeError, U
 import random
 import pytest
 
@@ -55,3 +55,22 @@ def test_list_errors():
     assert_error(foo1, [0] * 10 + [False], "11th element is False")
     assert_error(foo1, [0] * 11 + [True], "12th element is True")
     assert_error(foo1, [0] * 12 + [None] + [0] * 100, "13th element is None")
+
+
+def test_unions():
+    @typed(x=U([int], [str]))
+    def foo2(x):
+        return True
+
+    assert foo2([])
+    assert foo2([1, 17, 55])
+    assert foo2(["ham", "spam", "egg2"])
+    assert_error(foo2, [1, 5, "ham"],
+                 "Parameter `x` expects type `List[int]` but received a list "
+                 "where 3rd element is 'ham' of type str")
+    assert_error(foo2, ["spam", "bom", "bim", 2],
+                 "Parameter `x` expects type `List[str]` but received a list "
+                 "where 4th element is 2 of type int")
+    assert_error(foo2, {"q": 0},
+                 "Parameter `x` of type `List[int] | List[str]` received "
+                 "value {'q': 0} of type dict")
