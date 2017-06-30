@@ -10,6 +10,7 @@ build/
 dist/
 *.egg-info/
 *.sublime-*
+.idea
 
 
 # Coverage reports

@@ -21,7 +21,7 @@ else:
 
 try:
     import typing
-except ImportError:
+except ImportError:  # pragma no-cover
     typing = None
 
 
@@ -39,8 +39,10 @@ def checker_for_type(t):
         assert chkr.check("5") is False
     """
     try:
-        if t is True: return true_checker
-        if t is False: return false_checker
+        if t is True:
+            return true_checker
+        if t is False:
+            return false_checker
         checker = memoized_type_checkers.get(t)
         if checker is not None:
             return checker
@@ -74,9 +76,9 @@ def _create_checker_for_type(t):
             if issubclass(t, typing.Dict) and t is not dict:
                 if t.__args__:
                     key, value = t.__args__
-                    return checker_for_type({key: value})
-                else:
-                    return MtClass(dict)
+                    if key is not typing.Any and value is not typing.Any:
+                        return MtDict0(key, value)
+                return MtClass(dict, name="Dict")
             if issubclass(t, typing.Tuple) and t is not tuple:
                 tlen = len(t.__tuple_params__)
                 if t.__tuple_use_ellipsis__:
@@ -110,12 +112,16 @@ def _create_checker_for_type(t):
     if isinstance(t, tuple):
         return MtTuple(*t)
     if isinstance(t, dict):
+        if len(t.keys()) == 1:
+            key, val = list(t.items())[0]
+            if not isinstance(key, str):
+                return MtDict0(key, val)
         return MtDict(t)
     raise RuntimeError("Unknown type %r for type-checker" % t)
 
 
-
 # ------------------------------------------------------------------------------
+#
 # Basic types
 # ------------------------------------------------------------------------------
 
@@ -192,10 +198,10 @@ class MtClass(MagicType):
         return self._name
 
 
-
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+#
 # Checkers for primitive types
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 class MtNone(MagicType):
     def check(self, v):
@@ -255,17 +261,20 @@ class MtLiteral(MagicType):
     def name(self):
         if isinstance(self.literal, _str_type):
             s = repr(self.literal)
-            if s[0] == "u": s = s[1:]
+            if s[0] == "u":
+                # Python2 stringifies unicode strings as "u'something'", so
+                # we want to remove that prefix
+                s = s[1:]
             s = s[1:-1].replace('"', '\\"')
             return '"%s"' % s
         else:
             return str(self.literal)
 
 
-
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+#
 # Checkers for collection types
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 class MtList(MagicType):
     """
@@ -286,8 +295,10 @@ class MtList(MagicType):
         return "List[%s]" % self._elem.name()
 
     def fuzzycheck(self, v):
-        if not isinstance(v, list): return 0
-        if len(v) == 0: return 1
+        if not isinstance(v, list):
+            return 0
+        if len(v) == 0:
+            return 1
         c = self._elem
         return sum(c.fuzzycheck(x) for x in v) / len(v)
 
@@ -322,11 +333,11 @@ class MtSet(MagicType):
     def name(self):
         return "Set[%s]" % self._elem.name()
 
-    def fuzzycheck(self, v):
-        if not isinstance(v, set): return 0
-        if len(v) == 0: return 1
-        c = self._elem
-        return sum(c.fuzzycheck(x) for x in v) / len(v)
+    def fuzzycheck(self, value):
+        if not isinstance(value, set):
+            return 0
+        chk = self._elem.fuzzycheck
+        return sum(chk(x) for x in value) / len(value)
 
 
 
@@ -385,9 +396,57 @@ class MtDict(MagicType):
 
 
 
-#-------------------------------------------------------------------------------
+class MtDict0(MagicType):
+    """
+    MagicType for `Dict[Tk, Tv]` from the typing module. Alternatively, this
+    type can also be declared using a dict literal: `{Tk: Tv}`. The primary
+    difference from :class:`MtDict` is that this class allows typed keys and
+    values, but does not allow different types for values depending on the type
+    of the key.
+    """
+
+    def __init__(self, key, val):
+        self._key = checker_for_type(key)
+        self._val = checker_for_type(val)
+
+    def check(self, value):
+        kchk = self._key.check
+        vchk = self._val.check
+        return (isinstance(value, dict) and
+                all(kchk(k) and vchk(v) for k, v in value.items()))
+
+    def fuzzycheck(self, value):
+        if not isinstance(value, dict):
+            return 0
+        kchk = self._key.fuzzycheck
+        vchk = self._val.fuzzycheck
+        return sum(kchk(k) * vchk(v) for k, v in value.items()) / len(value)
+
+    def name(self):
+        return "Dict[%s, %s]" % (self._key.name(), self._val.name())
+
+    def get_error_msg(self, paramname, value):
+        if isinstance(value, dict):
+            kchk = self._key.check
+            vchk = self._val.check
+            for k, v in value.items():
+                if not kchk(k) or not vchk(v):
+                    kval = _prepare_value(k, notype=True)
+                    vval = _prepare_value(v, notype=True)
+                    return ("%s of type `%s` received a dict where one of "
+                            "key-value pairs is {%s: %s}"
+                            % (paramname, self.name(), kval, vval))
+            raise RuntimeError("Value %r satisfies %r" %  # pragma no-cover
+                               (value, self.name()))
+        else:
+            return super(MtDict0, self).get_error_msg(paramname, value)
+
+
+
+# ------------------------------------------------------------------------------
+#
 # Set operations with checkers
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 class U(MagicType):
     """
@@ -431,7 +490,7 @@ class U(MagicType):
             # THE type of the argument, but just one of its possible types
             mm = re.match(r"^(.*) of type (`[^`]+`) received ?a? ?(.*)$", msg)
             if mm:
-                msg = ("%s expects type %s but received a %s" % mm.groups())
+                msg = "%s expects type %s but received a %s" % mm.groups()
             return msg
         else:
             return super(U, self).get_error_msg(paramname, value)
@@ -479,9 +538,10 @@ class NOT(MagicType):
             return "!" + self._checkers[0].name()
 
 
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+#
 # Other
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 memoized_type_checkers = {
     None: MtNone(),
@@ -496,7 +556,7 @@ true_checker = MtLiteral(True)
 false_checker = MtLiteral(False)
 
 
-def _prepare_value(val, maxlen=50):
+def _prepare_value(val, maxlen=50, notype=False):
     """
     Stringify value `val`, ensuring that it is not too long.
     """
@@ -506,5 +566,8 @@ def _prepare_value(val, maxlen=50):
     sval = sval.replace("\n", " ").replace("\t", " ").replace("`", "'")
     if len(sval) > maxlen:
         sval = sval[:maxlen - 4] + "..." + sval[-1]
-    tval = checker_for_type(type(val)).name()
-    return "%s of type %s" % (sval, tval)
+    if notype:
+        return sval
+    else:
+        tval = checker_for_type(type(val)).name()
+        return "%s of type %s" % (sval, tval)

@@ -34,6 +34,8 @@ def test_output():
     do(str, list0)
     do([int, str], list0)
     do(bytes, ["hi", b"there"])
+    do({str: int}, [{"koo": 1}, {"moo": "foo"}, {1: 5},
+                    {"a": 1, "b": 2, "c": 3}])
 
 
 
