@@ -112,6 +112,9 @@ def test_dict1():
     assert_error({"a": int}, 777,
                  "Parameter `xyz` of type `{'a': int}` received value 777 of "
                  "type int")
+    assert_error(U({"a": int}, {"A": int}), 777,
+                 "Parameter `xyz` of type `{'a': int} | {'A': int}` received "
+                 "value 777 of type int")
     assert_error({"a": int}, {"a": "zero"},
                  "Parameter `xyz` of type `{'a': int}` received a dict where "
                  "key 'a' had value 'zero' of type str")
@@ -121,3 +124,7 @@ def test_dict1():
     assert_error({"f": int, Ellipsis: str}, {"f": 0, "g": 5},
                  "Parameter `xyz` of type `{'f': int, ...: str}` received a "
                  "dict where key 'g' had value 5 of type int")
+    assert_error(U({"a": int, "b": int, "c": int}, {"a": int},
+                   {"a": int, "b": str, "c": int}),
+                 {"a": 1, "b": "f", "c": "f"},
+                 "received a dict where key 'c' had value 'f' of type str")

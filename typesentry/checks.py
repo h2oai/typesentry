@@ -402,6 +402,16 @@ class MtDict1(MagicType):
                     self._anycheck and self._anycheck.check(v)
                     for k, v in value.items()))
 
+    def fuzzycheck(self, value):
+        if not isinstance(value, dict):
+            return 0
+        total = 0
+        for k, v in value.items():
+            checker = self._checks.get(k, self._anycheck)
+            if checker:
+                total += checker.fuzzycheck(v)
+        return total / len(value)
+
     def name(self):
         fields0 = ", ".join("%r: %s" % (k, v.name())
                             for k, v in self._checks.items())
