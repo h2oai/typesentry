@@ -1,16 +1,23 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 from __future__ import division, print_function
-from tests import typed, TTypeError, U
+from tests import typed, TTypeError, U, py3only
 import random
 import pytest
 
 
-def assert_error(fn, arg, err):
+def assert_error(fn_or_type, argvalue, errormsg):
+    if isinstance(fn_or_type, type(assert_error)):
+        fn = fn_or_type
+    else:
+        @typed(xyz=fn_or_type)
+        def fn(xyz):
+            return True
+
     with pytest.raises(TTypeError) as e:
-        fn(arg)
-        assert False, "Error %r was expected" % err
-    assert err in str(e.value)
+        fn(argvalue)
+    assert errormsg in str(e.value)
+
 
 
 
@@ -36,10 +43,11 @@ def test_output():
     do(bytes, ["hi", b"there"])
     do({str: int}, [{"koo": 1}, {"moo": "foo"}, {1: 5},
                     {"a": 1, "b": 2, "c": 3}])
+    do({str: int}, ["test"])
 
 
 
-def test_list_errors():
+def test_lists():
     @typed(x=[int])
     def foo1(x):
         return True
@@ -76,3 +84,40 @@ def test_unions():
     assert_error(foo2, {"q": 0},
                  "Parameter `x` of type `List[int] | List[str]` received "
                  "value {'q': 0} of type dict")
+
+
+@py3only
+def test_dicts0():
+    from typing import Dict, List, Any, Union
+    assert_error(Dict, "what", "Parameter `xyz` of type `Dict` received value "
+                               "'what' of type str")
+    assert_error(Dict[Any, Any], "what", "Parameter `xyz` of type `Dict` "
+                                         "received value 'what' of type str")
+    assert_error(Dict[str, int], "hello",
+                 "Parameter `xyz` of type `Dict[str, int]` received value "
+                 "'hello' of type str")
+    assert_error(Dict[str, List[int]], {"a": [1, 5, 'q']},
+                 "Parameter `xyz` of type `Dict[str, List[int]]` received a "
+                 "dict with a key-value pair {'a': [1, 5, 'q']}")
+    assert_error(Union[Dict[str, int], Dict[str, str]],
+                 {"a": 1, "b": 1, "d": "boo"},
+                 "Parameter `xyz` expects type `Dict[str, int]` but received "
+                 "a dict with a key-value pair {'d': 'boo'}")
+    assert_error(Union[Dict[str, int], Dict[str, str]], None,
+                 "Parameter `xyz` of type `Dict[str, int] | "
+                 "Dict[str, str]` received value None")
+
+
+def test_dict1():
+    assert_error({"a": int}, 777,
+                 "Parameter `xyz` of type `{'a': int}` received value 777 of "
+                 "type int")
+    assert_error({"a": int}, {"a": "zero"},
+                 "Parameter `xyz` of type `{'a': int}` received a dict where "
+                 "key 'a' had value 'zero' of type str")
+    assert_error({"a": int}, {"a": 0, "b": 1},
+                 "Parameter `xyz` of type `{'a': int}` received a dict with "
+                 "an unknown key 'b'")
+    assert_error({"f": int, Ellipsis: str}, {"f": 0, "g": 5},
+                 "Parameter `xyz` of type `{'f': int, ...: str}` received a "
+                 "dict where key 'g' had value 5 of type int")

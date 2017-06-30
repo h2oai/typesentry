@@ -21,7 +21,7 @@ else:
 
 try:
     import typing
-except ImportError:  # pragma no-cover
+except ImportError:  # pragma: no cover
     typing = None
 
 
@@ -116,7 +116,7 @@ def _create_checker_for_type(t):
             key, val = list(t.items())[0]
             if not isinstance(key, str):
                 return MtDict0(key, val)
-        return MtDict(t)
+        return MtDict1(t)
     raise RuntimeError("Unknown type %r for type-checker" % t)
 
 
@@ -377,7 +377,7 @@ class MtTuple(MagicType):
 
 
 
-class MtDict(MagicType):
+class MtDict1(MagicType):
     """
     MagicType corresponding to type declaration `{k1: v1, ..., kn: vn}`. Here
     keys must be string literals (additionally, key `...` is also accepted,
@@ -406,8 +406,26 @@ class MtDict(MagicType):
         fields0 = ", ".join("%r: %s" % (k, v.name())
                             for k, v in self._checks.items())
         if self._anycheck:
-            fields0 += "...: %s" % self._anycheck.name()
+            fields0 += ", ...: %s" % self._anycheck.name()
         return "{%s}" % fields0
+
+    def get_error_msg(self, paramname, value):
+        if isinstance(value, dict):
+            for k, v in value.items():
+                checker = self._checks.get(k, self._anycheck)
+                if checker:
+                    if not checker.check(v):
+                        vval = _prepare_value(v)
+                        return ("%s of type `%s` received a dict where key %r "
+                                "had value %s"
+                                % (paramname, self.name(), k, vval))
+                else:
+                    return ("%s of type `%s` received a dict with an unknown "
+                            "key %r" % (paramname, self.name(), k))
+            raise RuntimeError("Value %r satisfies %r" %  # pragma: no cover
+                               (value, self.name()))
+        else:
+            return super(MtDict1, self).get_error_msg(paramname, value)
 
 
 
@@ -415,7 +433,7 @@ class MtDict0(MagicType):
     """
     MagicType for `Dict[Tk, Tv]` from the typing module. Alternatively, this
     type can also be declared using a dict literal: `{Tk: Tv}`. The primary
-    difference from :class:`MtDict` is that this class allows typed keys and
+    difference from :class:`MtDict1` is that this class allows typed keys and
     values, but does not allow different types for values depending on the type
     of the key.
     """
@@ -448,10 +466,10 @@ class MtDict0(MagicType):
                 if not kchk(k) or not vchk(v):
                     kval = _prepare_value(k, notype=True)
                     vval = _prepare_value(v, notype=True)
-                    return ("%s of type `%s` received a dict where one of "
-                            "key-value pairs is {%s: %s}"
+                    return ("%s of type `%s` received a dict with a key-value "
+                            "pair {%s: %s}"
                             % (paramname, self.name(), kval, vval))
-            raise RuntimeError("Value %r satisfies %r" %  # pragma no-cover
+            raise RuntimeError("Value %r satisfies %r" %  # pragma: no cover
                                (value, self.name()))
         else:
             return super(MtDict0, self).get_error_msg(paramname, value)

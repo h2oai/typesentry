@@ -170,6 +170,12 @@ def test_bad_declaration():
                 pass
     assert str(e.value) == "`self` parameter must not be typed"
 
+    with pytest.raises(RuntimeError) as e:
+        @typed(z={str: str, int: int})
+        def foo2(z):
+            pass
+    assert "Keys in the dict literal must be string constants" in str(e.value)
+
 
 def test_wrapped_function():
     import functools

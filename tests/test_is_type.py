@@ -86,6 +86,7 @@ def test_dict():
     assert is_type({"spam": 10}, {"spam": int, "egg": int})
     assert is_type({"egg": 1}, {"spam": int, "egg": int})
     assert is_type({"egg": 1, "spam": 10}, {"spam": int, "egg": int})
+    assert is_type({"me": 5, "you": "?", "x": "--"}, {"me": int, Ellipsis: str})
     assert not is_type({"foo": 1}, {str: str})
     assert not is_type({"foo": 1, "bar": 2}, {"foo": int})
     assert not is_type({"foo": 1, "bar": 2}, {"foo": int, Ellipsis: str})
@@ -173,6 +174,7 @@ def test_List():
 @py3only
 def test_Dict():
     from typing import Dict, Union
+    assert is_type({"egg": 1, "spam": 10, "ham": None}, Dict)
     assert is_type({"egg": 1, "spam": 10}, Dict[str, int])
     assert is_type({"egg": 1, "spam": "10"}, Dict[str, Union[int, str]])
     assert not is_type({"egg": 1, "spam": "10"}, Dict[str, int])
