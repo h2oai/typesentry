@@ -294,13 +294,11 @@ class MtList(MagicType):
     def name(self):
         return "List[%s]" % self._elem.name()
 
-    def fuzzycheck(self, v):
-        if not isinstance(v, list):
+    def fuzzycheck(self, value):
+        if not isinstance(value, list):
             return 0
-        if len(v) == 0:
-            return 1
-        c = self._elem
-        return sum(c.fuzzycheck(x) for x in v) / len(v)
+        chk = self._elem.fuzzycheck
+        return sum(chk(x) for x in value) / len(value)
 
     def get_error_msg(self, paramname, value):
         if isinstance(value, list):
@@ -380,19 +378,36 @@ class MtTuple(MagicType):
 
 
 class MtDict(MagicType):
+    """
+    MagicType corresponding to type declaration `{k1: v1, ..., kn: vn}`. Here
+    keys must be string literals (additionally, key `...` is also accepted,
+    which matches any key other than those given explicitly).
+    """
+
     def __init__(self, kvs):
-        self._checks = [(checker_for_type(k), checker_for_type(v))
-                        for k, v in kvs.items()]
+        self._checks = {}
+        self._anycheck = None
+        for k, v in kvs.items():
+            if k is Ellipsis:
+                self._anycheck = checker_for_type(v)
+                continue
+            if not isinstance(k, str):
+                raise RuntimeError("Keys in the dict literal must be string "
+                                   "constants: %r" % kvs)
+            self._checks[k] = checker_for_type(v)
 
     def check(self, value):
         return (isinstance(value, dict) and
-                all(any(chk.check(k) and chv.check(v)
-                        for chk, chv in self._checks)
+                all(k in self._checks and self._checks[k].check(v) or
+                    self._anycheck and self._anycheck.check(v)
                     for k, v in value.items()))
 
     def name(self):
-        return "{%s}" % ", ".join("%s: %s" % (chk.name(), chv.name())
-                                  for chk, chv in self._checks)
+        fields0 = ", ".join("%r: %s" % (k, v.name())
+                            for k, v in self._checks.items())
+        if self._anycheck:
+            fields0 += "...: %s" % self._anycheck.name()
+        return "{%s}" % fields0
 
 
 

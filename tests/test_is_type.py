@@ -86,12 +86,9 @@ def test_dict():
     assert is_type({"spam": 10}, {"spam": int, "egg": int})
     assert is_type({"egg": 1}, {"spam": int, "egg": int})
     assert is_type({"egg": 1, "spam": 10}, {"spam": int, "egg": int})
-    # assert is_type({"egg": 1, "spam": 10}, Dict(egg=int, spam=int))
-    # assert is_type({"egg": 1, "spam": 10},
-    #                Dict(egg=int, spam=int, ham=U(int, None)))
     assert not is_type({"foo": 1}, {str: str})
     assert not is_type({"foo": 1, "bar": 2}, {"foo": int})
-    assert not is_type({"foo": 1, "bar": 2}, {"foo": int, str: str})
+    assert not is_type({"foo": 1, "bar": 2}, {"foo": int, Ellipsis: str})
 
 
 def test_tuple():
@@ -173,6 +170,9 @@ def test_List():
     assert not is_type([1, "sam", 2], List[int])
 
 
-# @py3only
-# def test_Dict():
-#     from typing import Dict
+@py3only
+def test_Dict():
+    from typing import Dict, Union
+    assert is_type({"egg": 1, "spam": 10}, Dict[str, int])
+    assert is_type({"egg": 1, "spam": "10"}, Dict[str, Union[int, str]])
+    assert not is_type({"egg": 1, "spam": "10"}, Dict[str, int])
