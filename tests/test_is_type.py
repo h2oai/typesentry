@@ -23,10 +23,18 @@ def test_custom():
     # The class doesn't override check(), and hence always fails a typecheck
     class A(MagicType): pass
 
+    class B(MagicType):
+        def check(self, x):
+            return isinstance(x, int) and (x % 2 == 1)
+
     assert not is_type(None, A)
     assert not is_type(1, A)
     assert not is_type(A, A)
     assert not is_type(A(), A)
+    assert is_type(1, B)
+    assert is_type(13137, B)
+    assert not is_type(222, B)
+    assert not is_type("1", B)
 
 
 def test_primitives():
