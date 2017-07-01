@@ -92,6 +92,14 @@ def _create_checker_for_type(t):
                     return MtSet(itemtype)
                 else:
                     return MtClass(set, name="Set")
+            # This is somewhat ugly, but I do not know a better way to check
+            # that something is constructed from Type.
+            if str(t) == "typing.Type" or str(t).startswith("typing.Type["):
+                cls = t.__args__ and t.__args__[0]
+                if cls and cls is not typing.Any:
+                    return MtType(cls)
+                else:
+                    return MtClass(type, name="Type")
 
         # `t` is a name of the class, or a built-in type such as
         # `list, `tuple`, etc
@@ -484,6 +492,27 @@ class MtDict0(MagicType):
         else:
             return super(MtDict0, self).get_error_msg(paramname, value)
 
+
+class MtType(MagicType):
+
+    def __init__(self, cls):
+        assert isinstance(cls, type)
+        self._cls = cls
+
+    def check(self, val):
+        return isinstance(val, type) and issubclass(val, self._cls)
+
+    def name(self):
+        return "Type[%s]" % self._cls.__name__
+
+    def get_error_msg(self, paramname, value):
+        if isinstance(value, type):
+            return ("%s of type `%s` received class %s which is not a subclass "
+                    "of %s"
+                    % (paramname, self.name(), value.__name__,
+                       self._cls.__name__))
+        else:
+            return super(MtType, self).get_error_msg(paramname, value)
 
 
 # ------------------------------------------------------------------------------

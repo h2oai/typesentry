@@ -178,3 +178,30 @@ def test_Dict():
     assert is_type({"egg": 1, "spam": 10}, Dict[str, int])
     assert is_type({"egg": 1, "spam": "10"}, Dict[str, Union[int, str]])
     assert not is_type({"egg": 1, "spam": "10"}, Dict[str, int])
+
+
+@py3only
+def test_Type():
+    from typing import Type, Any
+
+    class A(object): pass
+
+    class B(A): pass
+
+    class C(B): pass
+
+    class D(A): pass
+
+    assert is_type(A, type)
+    assert is_type(A, Type)
+    assert is_type(A, Type[Any])
+    assert is_type(A, Type[object])
+    assert is_type(A, Type[A])
+    assert is_type(B, Type[A])
+    assert is_type(C, Type[A])
+    assert is_type(C, Type[B])
+    assert is_type(D, Type[A])
+    assert not is_type(A, Type[B])
+    assert not is_type(D, Type[B])
+    assert not is_type("str", Type)
+    assert not is_type(None, Type[A])

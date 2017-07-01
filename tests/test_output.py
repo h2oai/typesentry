@@ -128,3 +128,21 @@ def test_dict1():
                    {"a": int, "b": str, "c": int}),
                  {"a": 1, "b": "f", "c": "f"},
                  "received a dict where key 'c' had value 'f' of type str")
+
+
+@py3only
+def test_type():
+    from typing import Type
+
+    class A: pass
+
+    class B(A): pass
+
+    assert_error(Type[A], [1, 5, 2],
+                 "type `Type[A]` received value [1, 5, 2] of type list")
+    assert_error(Type[A], int,
+                 "Parameter `xyz` of type `Type[A]` received class int "
+                 "which is not a subclass of A")
+    assert_error(Type[B], A,
+                 "Parameter `xyz` of type `Type[B]` received class A "
+                 "which is not a subclass of B")
