@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 import pytest
-from tests import is_type, py3only, PY3, U, I, NOT
+from tests import is_type, py3only, PY3, U, I, NOT, MagicType
 
 
 def test_literals():
@@ -17,6 +17,16 @@ def test_literals():
     assert is_type(None, int, str, None)
     assert not is_type(1, 2)
     assert not is_type(False, None)
+
+
+def test_custom():
+    # The class doesn't override check(), and hence always fails a typecheck
+    class A(MagicType): pass
+
+    assert not is_type(None, A)
+    assert not is_type(1, A)
+    assert not is_type(A, A)
+    assert not is_type(A(), A)
 
 
 def test_primitives():
