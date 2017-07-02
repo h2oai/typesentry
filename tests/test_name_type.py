@@ -53,8 +53,8 @@ def test_collections():
 
 
 @py3only
-def test1():
-    from typing import Any, List, Set, Dict, Type
+def test_typing():
+    from typing import Any, List, Set, Dict, Type, Tuple
     assert name_type(Any) == "Any"
     assert name_type(List) == "List"
     assert name_type(List[Any]) == "List"
@@ -69,3 +69,8 @@ def test1():
     assert name_type(Type) == "Type"
     assert name_type(Type[int]) == "Type[int]"
     assert name_type(Type[MagicType]) == "Type[MagicType]"
+    assert name_type(Tuple) == "Tuple"
+    assert name_type(Tuple[int]) == "Tuple[int]"
+    assert name_type(Tuple[int, str, List]) == "Tuple[int, str, List]"
+    assert name_type(Tuple[int, Ellipsis]) == "Tuple[int, ...]"
+    assert name_type(Tuple[str, Ellipsis]) == "Tuple[str, ...]"

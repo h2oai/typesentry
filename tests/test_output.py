@@ -146,3 +146,22 @@ def test_type():
     assert_error(Type[B], A,
                  "Parameter `xyz` of type `Type[B]` received class A "
                  "which is not a subclass of B")
+
+
+def test_tuple():
+    assert_error((str, Ellipsis), "With Her =>",
+                 "Parameter `xyz` of type `Tuple[str, ...]` received value "
+                 "'With Her =>' of type str")
+    assert_error((int, Ellipsis), (1, 7, 0, "foo", 5),
+                 "Parameter `xyz` of type `Tuple[int, ...]` received a tuple "
+                 "where 4th element is 'foo' of type str")
+    assert_error(U((int, Ellipsis), (str, Ellipsis), (list, Ellipsis)),
+                 ("foo", 1, 7, 0, 5),
+                 "Parameter `xyz` expects type `Tuple[int, ...]` but received "
+                 "a tuple where 1st element is 'foo' of type str")
+    assert_error(U((int, Ellipsis), (str, Ellipsis), (float, Ellipsis)), "huh?",
+                 "Parameter `xyz` of type `Tuple[int, ...] | Tuple[str, "
+                 "...] | Tuple[float, ...]` received value 'huh?' of type str")
+    # assert_error((int, str), (1, 5),
+    #              "Parameter `xyz` of type `Tuple[int, str]` received a tuple "
+    #              "where 2nd element is 5 of type int")

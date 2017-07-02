@@ -21,8 +21,10 @@ else:
 
 try:
     import typing
+    need_to_fix_typing = hasattr(typing.Union[int], "__union_params__")
 except ImportError:  # pragma: no cover
     typing = None
+    need_to_fix_typing = False
 
 
 
@@ -59,6 +61,13 @@ def checker_for_type(t):
 
 
 def _create_checker_for_type(t):
+    if need_to_fix_typing:  # pragma: no cover
+        if hasattr(t, "__union_params__"):
+            t.__args__ = t.__union_params__
+        if hasattr(t, "__tuple_params__"):
+            t.__args__ = t.__tuple_params__
+            if t.__tuple_use_ellipsis__:
+                t.__args__ += (Ellipsis, )
     if isinstance(t, _primitive_type):
         return MtLiteral(t)
     if isinstance(t, MagicType):
@@ -80,12 +89,13 @@ def _create_checker_for_type(t):
                         return MtDict0(key, value)
                 return MtClass(dict, name="Dict")
             if issubclass(t, typing.Tuple) and t is not tuple:
-                tlen = len(t.__tuple_params__)
-                if t.__tuple_use_ellipsis__:
-                    assert tlen == 1
-                    return MtTuple(t.__tuple_params__[0], Ellipsis)
+                if t.__args__:
+                    if len(t.__args__) == 2 and t.__args__[1] is Ellipsis:
+                        return MtTuple0(t.__args__[0])
+                    else:
+                        return MtTuple1(*t.__args__)
                 else:
-                    return MtTuple(*t.__tuple_params__)
+                    return MtClass(tuple, name="Tuple")
             if issubclass(t, typing.Set) and t is not set:
                 itemtype = t.__args__ and t.__args__[0]
                 if itemtype and itemtype is not typing.Any:
@@ -108,17 +118,17 @@ def _create_checker_for_type(t):
         if t is typing.Any:
             return MtAny()
         if type(t) is type(typing.Union):  # flake8: disable=E721
-            try:
-                return U(*t.__union_params__)
-            except AttributeError:
-                return U(*t.__args__)
+            return U(*t.__args__)
     if isinstance(t, list):
         # `t` is a list literal, such as [int, str]
         return MtList(U(*t))
     if isinstance(t, set):
         return MtSet(U(*t))
     if isinstance(t, tuple):
-        return MtTuple(*t)
+        if len(t) == 2 and t[1] is Ellipsis:
+            return MtTuple0(t[0])
+        else:
+            return MtTuple1(*t)
     if isinstance(t, dict):
         if len(t.keys()) == 1:
             key, val = list(t.items())[0]
@@ -347,41 +357,67 @@ class MtSet(MagicType):
 
 
 
-class MtTuple(MagicType):
+class MtTuple1(MagicType):
     """
-    MagicType corresponding to either `Tuple[T1, …, Tn]` (tuple with fixed
-    number of entries) or `Tuple[T1, …, Tn, ...]` (tuple where the last entry
-    may be repeated multiple times and have the same type `Tn`).
+    MagicType corresponding to `Tuple[T1, ..., Tn]` (tuple with fixed
+    number of entries). For a tuple with variable number of entries, see
+    :class:`MtTuple0`.
     """
 
     def __init__(self, *items):
-        if len(items) >= 2 and items[-1] is Ellipsis:
-            # Variable-length tuple whose last element has type `_last`
-            self._checks = [checker_for_type(t) for t in items[:-2]]
-            self._last = checker_for_type(items[-2])
-        else:
-            # Fixed-length tuple
-            self._checks = [checker_for_type(t) for t in items]
-            self._last = None
+        self._checks = [checker_for_type(t) for t in items]
 
     def check(self, v):
-        if self._last:  # variable-length tuple
-            last_checker = self._last.check
-            return (isinstance(v, tuple) and
-                    len(v) >= len(self._checks) and
-                    all(c.check(v[i]) for i, c in enumerate(self._checks)) and
-                    all(last_checker(elem) for elem in v[len(self._checks):]))
-        else:  # fixed-length tuple
-            return (isinstance(v, tuple) and
-                    len(v) == len(self._checks) and
-                    all(c.check(v[i]) for i, c in enumerate(self._checks)))
+        return (isinstance(v, tuple) and
+                len(v) == len(self._checks) and
+                all(c.check(v[i]) for i, c in enumerate(self._checks)))
 
     def name(self):
-        if self._last:
-            first = ", ".join(ch.name() for ch in self._checks)
-            return "Tuple[" + ", ".join([first, self._last.name(), "..."]) + "]"
+        return "Tuple[%s]" % ", ".join(ch.name() for ch in self._checks)
+
+
+
+class MtTuple0(MagicType):
+    """
+    MagicType corresponding to `Tuple[T, ...]`.
+
+    This type constructs special error message in the case it is matched against
+    a tuple where some of the elements are `T` while others are not `T`.
+    """
+
+    def __init__(self, elem_type):
+        self._elem = checker_for_type(elem_type)
+
+    def check(self, v):
+        c = self._elem
+        return isinstance(v, tuple) and all(c.check(x) for x in v)
+
+    def name(self):
+        return "Tuple[%s, ...]" % self._elem.name()
+
+    def fuzzycheck(self, value):
+        if not isinstance(value, tuple):
+            return 0
+        chk = self._elem.fuzzycheck
+        return sum(chk(x) for x in value) / len(value)
+
+    def get_error_msg(self, paramname, value):
+        if isinstance(value, tuple):
+            elemchecker = self._elem.check
+            ibad = -1
+            for i, x in enumerate(value):
+                if not elemchecker(x):
+                    ibad = i + 1
+                    break
+            nth = ("%dst" if (ibad % 10 == 1 and ibad % 100 != 11) else
+                   "%dnd" if (ibad % 10 == 2 and ibad % 100 != 12) else
+                   "%drd" if (ibad % 10 == 3 and ibad % 100 != 13) else
+                   "%dth") % ibad
+            sval = _prepare_value(value[ibad - 1])
+            return ("%s of type `%s` received a tuple where %s element is %s"
+                    % (paramname, self.name(), nth, sval))
         else:
-            return "Tuple[" + ", ".join(ch.name() for ch in self._checks) + "]"
+            return MagicType.get_error_msg(self, paramname, value)
 
 
 

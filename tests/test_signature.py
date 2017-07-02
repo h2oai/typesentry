@@ -177,6 +177,7 @@ def test_bad_declaration():
     assert "Keys in the dict literal must be string constants" in str(e.value)
 
 
+
 def test_wrapped_function():
     import functools
 
