@@ -118,12 +118,14 @@ def _create_checker_for_type(t):
         if t is typing.Any:
             return MtAny()
         if type(t) is type(typing.Union):  # flake8: disable=E721
-            return U(*t.__args__)
+            return MtUnion(*t.__args__)
     if isinstance(t, list):
         # `t` is a list literal, such as [int, str]
-        return MtList(U(*t))
+        assert len(t)
+        return MtList(MtUnion(*t) if len(t) > 1 else t[0])
     if isinstance(t, set):
-        return MtSet(U(*t))
+        assert len(t) > 0
+        return MtSet(MtUnion(*t) if len(t) > 1 else list(t)[0])
     if isinstance(t, tuple):
         if len(t) == 2 and t[1] is Ellipsis:
             return MtTuple0(t[0])
@@ -556,7 +558,7 @@ class MtType(MagicType):
 # Set operations with checkers
 # ------------------------------------------------------------------------------
 
-class U(MagicType):
+class MtUnion(MagicType):
     """
     Union of types.
 
@@ -572,7 +574,9 @@ class U(MagicType):
     """
 
     def __init__(self, *types):
-        assert len(types) >= 1
+        if len(types) <= 1:
+            raise RuntimeError("More than one type is expected for Union "
+                               "constructor: %r" % types)
         self._checkers = [checker_for_type(t) for t in types]
 
     def check(self, var):
@@ -584,10 +588,9 @@ class U(MagicType):
     def name(self):
         res = [c.name() for c in self._checkers]
         if len(res) == 2 and "None" in res:
-            res.remove("None")
-            return "?" + res[0]
+            return "Optional[%s]" % (res[0] if res[1] == "None" else res[1])
         else:
-            return " | ".join(res)
+            return "Union[%s]" % ", ".join(res)
 
     def get_error_msg(self, paramname, value):
         best = max(self._checkers, key=lambda c: c.fuzzycheck(value))
@@ -601,11 +604,11 @@ class U(MagicType):
                 msg = "%s expects type %s but received a %s" % mm.groups()
             return msg
         else:
-            return super(U, self).get_error_msg(paramname, value)
+            return super(MtUnion, self).get_error_msg(paramname, value)
 
 
 
-class I(MagicType):
+class MtIntersection(MagicType):
     """
     Intersection of types.
 
@@ -614,17 +617,19 @@ class I(MagicType):
     """
 
     def __init__(self, *types):
-        assert len(types) >= 1
+        if len(types) <= 1:
+            raise RuntimeError("More than one type is expected for Intersection"
+                               " constructor: %r" % types)
         self._checkers = [checker_for_type(t) for t in types]
 
     def check(self, var):
         return all(c.check(var) for c in self._checkers)
 
     def name(self):
-        return " & ".join(c.name() for c in self._checkers)
+        return "Intersection[%s]" % ", ".join(c.name() for c in self._checkers)
 
 
-class NOT(MagicType):
+class MtNot(MagicType):
     """
     Negation of a type.
 
@@ -640,10 +645,7 @@ class NOT(MagicType):
         return not any(c.check(var) for c in self._checkers)
 
     def name(self):
-        if len(self._checkers) > 1:
-            return "!(%s)" % " | ".join(ch.name() for ch in self._checkers)
-        else:
-            return "!" + self._checkers[0].name()
+        return "Not[%s]" % ", ".join(ch.name() for ch in self._checkers)
 
 
 # ------------------------------------------------------------------------------

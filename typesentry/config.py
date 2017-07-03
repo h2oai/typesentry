@@ -7,7 +7,8 @@ import sys
 
 import colorama
 
-from typesentry.checks import checker_for_type, U
+from typesentry.checks import checker_for_type
+from typesentry.checks import MtUnion as U
 from typesentry.signature import Signature
 
 __all__ = ("Config", )

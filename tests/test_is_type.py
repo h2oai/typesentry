@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 import pytest
-from tests import is_type, py3only, PY3, U, I, NOT, MagicType
+from tests import is_type, py3only, PY3, U, I, Not, MagicType
 
 
 def test_literals():
@@ -146,7 +146,7 @@ def test_class():
     assert not is_type(A, A)
     assert not is_type("A", A)
     assert not is_type(A(), B)
-    assert not is_type(D(), NOT(C))
+    assert not is_type(D(), Not(C))
     with pytest.raises(RuntimeError):
         is_type(1, A())
 

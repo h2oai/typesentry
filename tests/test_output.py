@@ -82,7 +82,7 @@ def test_unions():
                  "Parameter `x` expects type `List[str]` but received a list "
                  "where 4th element is 2 of type int")
     assert_error(foo2, {"q": 0},
-                 "Parameter `x` of type `List[int] | List[str]` received "
+                 "Parameter `x` of type `Union[List[int], List[str]]` received "
                  "value {'q': 0} of type dict")
 
 
@@ -104,8 +104,8 @@ def test_dicts0():
                  "Parameter `xyz` expects type `Dict[str, int]` but received "
                  "a dict with a key-value pair {'d': 'boo'}")
     assert_error(Union[Dict[str, int], Dict[str, str]], None,
-                 "Parameter `xyz` of type `Dict[str, int] | "
-                 "Dict[str, str]` received value None")
+                 "Parameter `xyz` of type `Union[Dict[str, int], "
+                 "Dict[str, str]]` received value None")
 
 
 def test_dict1():
@@ -113,8 +113,8 @@ def test_dict1():
                  "Parameter `xyz` of type `{'a': int}` received value 777 of "
                  "type int")
     assert_error(U({"a": int}, {"A": int}), 777,
-                 "Parameter `xyz` of type `{'a': int} | {'A': int}` received "
-                 "value 777 of type int")
+                 "Parameter `xyz` of type `Union[{'a': int}, {'A': int}]` "
+                 "received value 777 of type int")
     assert_error({"a": int}, {"a": "zero"},
                  "Parameter `xyz` of type `{'a': int}` received a dict where "
                  "key 'a' had value 'zero' of type str")
@@ -160,8 +160,8 @@ def test_tuple():
                  "Parameter `xyz` expects type `Tuple[int, ...]` but received "
                  "a tuple where 1st element is 'foo' of type str")
     assert_error(U((int, Ellipsis), (str, Ellipsis), (float, Ellipsis)), "huh?",
-                 "Parameter `xyz` of type `Tuple[int, ...] | Tuple[str, "
-                 "...] | Tuple[float, ...]` received value 'huh?' of type str")
+                 "Parameter `xyz` of type `Union[Tuple[int, ...], Tuple[str, "
+                 "...], Tuple[float, ...]]` received value 'huh?' of type str")
     # assert_error((int, str), (1, 5),
     #              "Parameter `xyz` of type `Tuple[int, str]` received a tuple "
     #              "where 2nd element is 5 of type int")

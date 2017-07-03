@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, "..")
 
 import typesentry  # noqa
-from typesentry import U, I, NOT, MagicType  # noqa
+from typesentry import U, I, Not, MagicType  # noqa
 
 _tc = typesentry.Config()
 typed = _tc.typed
@@ -24,4 +24,4 @@ py3only = pytest.mark.skipif(sys.version_info < (3, 5),
 PY3 = sys.version_info > (3, )
 
 __all__ = ("is_type", "name_type", "typed", "TTypeError", "TValueError",
-           "py3only", "U", "I", "NOT", "MagicType", "PY3")
+           "py3only", "U", "I", "Not", "MagicType", "PY3")

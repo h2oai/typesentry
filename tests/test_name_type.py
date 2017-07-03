@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
-from tests import name_type, py3only, MagicType, U, I, NOT
+from tests import name_type, py3only, MagicType, U, I, Not
 
 
 def test_simple():
@@ -32,16 +32,16 @@ def test_simple():
 
 
 def test_composites():
-    assert name_type(int, str) == "int | str"
-    assert name_type(U(int, str)) == "int | str"
-    assert name_type(U(1, 2, 3)) == "1 | 2 | 3"
-    assert name_type(U(False, 0, "")) == 'False | 0 | ""'
-    assert name_type(U(int, None)) == "?int"
-    assert name_type(U(None, float)) == "?float"
-    assert name_type(I(int, str)) == "int & str"
-    assert name_type(I(int)) == "int"
-    assert name_type(I(int, NOT(0))) == "int & !0"
-    assert name_type(I(int, NOT(0, 1, -1))) == "int & !(0 | 1 | -1)"
+    assert name_type(int, str) == "Union[int, str]"
+    assert name_type(U(int, str)) == "Union[int, str]"
+    assert name_type(U(1, 2, 3)) == "Union[1, 2, 3]"
+    assert name_type(U(False, 0, "")) == 'Union[False, 0, ""]'
+    assert name_type(U(int, None)) == "Optional[int]"
+    assert name_type(U(None, float)) == "Optional[float]"
+    assert name_type(I(int, str)) == "Intersection[int, str]"
+    assert name_type(I(int, bool, float)) == "Intersection[int, bool, float]"
+    assert name_type(I(int, Not(0))) == "Intersection[int, Not[0]]"
+    assert name_type(I(int, Not(0, 1, -1))) == "Intersection[int, Not[0, 1, -1]]"
 
 
 def test_collections():
@@ -49,7 +49,7 @@ def test_collections():
     assert name_type(list) == "list"
     assert name_type(set) == "set"
     assert name_type([int]) == "List[int]"
-    assert name_type([int, str]) == "List[int | str]"
+    assert name_type([int, str]) == "List[Union[int, str]]"
 
 
 @py3only
