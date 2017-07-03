@@ -323,20 +323,13 @@ class MtList(MagicType):
     def get_error_msg(self, paramname, value):
         if isinstance(value, list):
             elemchecker = self._elem.check
-            ibad = -1
             for i, x in enumerate(value):
                 if not elemchecker(x):
-                    ibad = i + 1
-                    break
-            nth = ("%dst" if (ibad % 10 == 1 and ibad % 100 != 11) else
-                   "%dnd" if (ibad % 10 == 2 and ibad % 100 != 12) else
-                   "%drd" if (ibad % 10 == 3 and ibad % 100 != 13) else
-                   "%dth") % ibad
-            sval = _prepare_value(value[ibad - 1])
-            return ("%s of type `%s` received a list where %s element is %s"
-                    % (paramname, self.name(), nth, sval))
-        else:
-            return super(MtList, self).get_error_msg(paramname, value)
+                    nth = _nth_str(i + 1)
+                    sval = _prepare_value(x)
+                    return ("%s of type `%s` received a list where %s element "
+                            "is %s" % (paramname, self.name(), nth, sval))
+        return MagicType.get_error_msg(self, paramname, value)
 
 
 
@@ -345,8 +338,8 @@ class MtSet(MagicType):
         self._elem = checker_for_type(elem_type)
 
     def check(self, v):
-        c = self._elem
-        return isinstance(v, set) and all(c.check(x) for x in v)
+        chk = self._elem.check
+        return isinstance(v, set) and all(chk(x) for x in v)
 
     def name(self):
         return "Set[%s]" % self._elem.name()
@@ -356,6 +349,16 @@ class MtSet(MagicType):
             return 0
         chk = self._elem.fuzzycheck
         return sum(chk(x) for x in value) / len(value)
+
+    def get_error_msg(self, paramname, value):
+        if isinstance(value, set):
+            elemchecker = self._elem.check
+            for x in value:
+                if not elemchecker(x):
+                    sval = _prepare_value(x)
+                    return ("%s of type `%s` received set containing an "
+                            "element %s" % (paramname, self.name(), sval))
+        return MagicType.get_error_msg(self, paramname, value)
 
 
 
@@ -374,8 +377,31 @@ class MtTuple1(MagicType):
                 len(v) == len(self._checks) and
                 all(c.check(v[i]) for i, c in enumerate(self._checks)))
 
+    def fuzzycheck(self, value):
+        if not isinstance(value, tuple):
+            return 0
+        maxlen = max(len(value), len(self._checks))
+        minlen = min(len(value), len(self._checks))
+        return sum(self._checks[i].fuzzycheck(value[i])
+                   for i in range(minlen)) / maxlen
+
     def name(self):
         return "Tuple[%s]" % ", ".join(ch.name() for ch in self._checks)
+
+    def get_error_msg(self, paramname, value):
+        if isinstance(value, tuple):
+            if len(value) != len(self._checks):
+                return ("%s of type `%s` received a tuple of length %d, "
+                        "whereas length %d was expected"
+                        % (paramname, self.name(), len(value),
+                           len(self._checks)))
+            for i, chk in enumerate(self._checks):
+                if not chk.check(value[i]):
+                    sval = _prepare_value(value[i])
+                    return ("%s of type `%s` received a tuple where %s element "
+                            "is %s"
+                            % (paramname, self.name(), _nth_str(i + 1), sval))
+        return MagicType.get_error_msg(self, paramname, value)
 
 
 
@@ -411,10 +437,7 @@ class MtTuple0(MagicType):
                 if not elemchecker(x):
                     ibad = i + 1
                     break
-            nth = ("%dst" if (ibad % 10 == 1 and ibad % 100 != 11) else
-                   "%dnd" if (ibad % 10 == 2 and ibad % 100 != 12) else
-                   "%drd" if (ibad % 10 == 3 and ibad % 100 != 13) else
-                   "%dth") % ibad
+            nth = _nth_str(ibad)
             sval = _prepare_value(value[ibad - 1])
             return ("%s of type `%s` received a tuple where %s element is %s"
                     % (paramname, self.name(), nth, sval))
@@ -681,3 +704,13 @@ def _prepare_value(val, maxlen=50, notype=False):
     else:
         tval = checker_for_type(type(val)).name()
         return "%s of type %s" % (sval, tval)
+
+def _nth_str(n):
+    """Return posessive form of numeral `n`: 1st, 2nd, 3rd, etc."""
+    if n % 10 == 1 and n % 100 != 11:
+        return "%dst" % n
+    if n % 10 == 2 and n % 100 != 12:
+        return "%dnd" % n
+    if n % 10 == 3 and n % 100 != 13:
+        return "%drd" % n
+    return "%dth" % n

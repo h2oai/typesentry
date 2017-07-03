@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 from __future__ import division, print_function
-from tests import typed, TTypeError, U, py3only
+from tests import typed, TTypeError, U, py3only, nth_str
 import random
 import pytest
 
@@ -84,6 +84,9 @@ def test_unions():
     assert_error(foo2, {"q": 0},
                  "Parameter `x` of type `Union[List[int], List[str]]` received "
                  "value {'q': 0} of type dict")
+    assert_error(U([int, str], int, str), [1, "boo", False],
+                 "Parameter `xyz` expects type `List[Union[int, str]]` but "
+                 "received a list where 3rd element is False")
 
 
 @py3only
@@ -162,6 +165,58 @@ def test_tuple():
     assert_error(U((int, Ellipsis), (str, Ellipsis), (float, Ellipsis)), "huh?",
                  "Parameter `xyz` of type `Union[Tuple[int, ...], Tuple[str, "
                  "...], Tuple[float, ...]]` received value 'huh?' of type str")
-    # assert_error((int, str), (1, 5),
-    #              "Parameter `xyz` of type `Tuple[int, str]` received a tuple "
-    #              "where 2nd element is 5 of type int")
+    assert_error((int, str), (1, 5),
+                 "Parameter `xyz` of type `Tuple[int, str]` received a tuple "
+                 "where 2nd element is 5 of type int")
+    assert_error((int, str), (1, "foo", "bar"),
+                 "Parameter `xyz` of type `Tuple[int, str]` received a tuple "
+                 "of length 3, whereas length 2 was expected")
+    assert_error((int, str), (1,),
+                 "Parameter `xyz` of type `Tuple[int, str]` received a tuple "
+                 "of length 1, whereas length 2 was expected")
+    assert_error((int, str), '(1, "foo")',
+                 "Parameter `xyz` of type `Tuple[int, str]` received value "
+                 "'(1, \"foo\")' of type str")
+    assert_error(U((int, str), (int, int)), (2, 5, 3),
+                 "Parameter `xyz` expects type `Tuple[int, int]` but received "
+                 "a tuple of length 3, whereas length 2 was expected")
+    assert_error(U((int, str), (int, int)), "(2, 5)",
+                 "Parameter `xyz` of type `Union[Tuple[int, str], Tuple[int, "
+                 "int]]` received value '(2, 5)' of type str")
+
+
+def test_set():
+    assert_error({int}, None,
+                 "Parameter `xyz` of type `Set[int]` received value None")
+    assert_error({int}, {1, 5, "pawn"},
+                 "Parameter `xyz` of type `Set[int]` received set containing "
+                 "an element 'pawn' of type str")
+    assert_error(U({int}, {str}), None,
+                 "Parameter `xyz` of type `Union[Set[int], Set[str]]` received "
+                 "value None")
+    assert_error(U({int}, {str}), {1, 5, "pawn"},
+                 "Parameter `xyz` expects type `Set[int]` but received a "
+                 "set containing an element 'pawn' of type str")
+
+
+def test_nth_str():
+    assert nth_str(0) == "0th"
+    assert nth_str(1) == "1st"
+    assert nth_str(2) == "2nd"
+    assert nth_str(3) == "3rd"
+    assert nth_str(4) == "4th"
+    for i in range(5, 21):
+        assert nth_str(i) == str(i) + "th"
+    assert nth_str(21) == "21st"
+    assert nth_str(22) == "22nd"
+    assert nth_str(23) == "23rd"
+    assert nth_str(24) == "24th"
+    assert nth_str(100) == "100th"
+    assert nth_str(101) == "101st"
+    assert nth_str(111) == "111th"
+    assert nth_str(112) == "112th"
+    assert nth_str(113) == "113th"
+    assert nth_str(121) == "121st"
+    assert nth_str(122) == "122nd"
+    assert nth_str(123) == "123rd"
+    assert nth_str(1000) == "1000th"

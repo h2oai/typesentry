@@ -25,10 +25,16 @@ def test_simple():
     assert name_type(False) == "False"
     assert name_type(True) == "True"
     assert name_type("foo") == '"foo"'
+    assert name_type(u"föö")  # pytest cannot handle unicode properly
     assert name_type(ABCD) == "ABCD"
     assert name_type(EFGH) == "?"  # name() is not overridden
     assert name_type(IJKL) == "i-j-k-l"
     assert name_type(MagicType) == "?"
+
+@py3only
+def test_unicode_literal():
+    # In py2 this stringifies into '"f\\xf6\\xf6"'
+    assert name_type(u"föö") == '"föö"'
 
 
 def test_composites():
@@ -41,7 +47,7 @@ def test_composites():
     assert name_type(I(int, str)) == "Intersection[int, str]"
     assert name_type(I(int, bool, float)) == "Intersection[int, bool, float]"
     assert name_type(I(int, Not(0))) == "Intersection[int, Not[0]]"
-    assert name_type(I(int, Not(0, 1, -1))) == "Intersection[int, Not[0, 1, -1]]"
+    assert name_type(I(int, Not(1, -1))) == "Intersection[int, Not[1, -1]]"
 
 
 def test_collections():

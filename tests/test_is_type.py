@@ -223,3 +223,15 @@ def test_Type():
     assert not is_type(D, Type[B])
     assert not is_type("str", Type)
     assert not is_type(None, Type[A])
+
+
+def test_bad_uses():
+    with pytest.raises(RuntimeError) as e:
+        assert is_type(1, U(int))
+    assert ("More than one type is expected for Union constructor"
+            in str(e.value))
+
+    with pytest.raises(RuntimeError) as e:
+        assert is_type(1, I(int))
+    assert ("More than one type is expected for Intersection constructor"
+            in str(e.value))
