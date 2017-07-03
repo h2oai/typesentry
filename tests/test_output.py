@@ -3,6 +3,7 @@
 from __future__ import division, print_function
 from tests import typed, TTypeError, U, py3only, nth_str
 import random
+import sys
 import pytest
 
 
@@ -27,11 +28,14 @@ def test_output():
         def foo(monty):
             return True
 
+        def oof(z):
+            return foo(z)
+
         for x in args:
             try:
-                assert foo(x)
+                assert oof(x)
             except TTypeError as e:
-                e._handle_()
+                e._handle_(*sys.exc_info())
 
     print()
     list0 = [None, random.randint(0, 10000), "zooka", (1, 3),

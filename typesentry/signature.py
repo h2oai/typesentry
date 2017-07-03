@@ -175,7 +175,7 @@ class Signature(object):
         if rvchk:
             def _checker(value):
                 if not rvchk.check(value):
-                    raise self._tc.TypeError(
+                    raise self._type_error(
                         "Incorrect return type in %s: expected %s got %s" %
                         (self.name_bt, rvchk.name(),
                          checker_for_type(type(value)).name())
@@ -236,7 +236,7 @@ class Signature(object):
                 if index is None:
                     s = "%s got an unexpected keyword argument `%s`" % \
                         (self.name_bt, argname)
-                    raise self._tc.TypeError(s)
+                    raise self._type_error(s)
                 param = self.params[index]
                 if param.checker and not (
                     param.checker.check(argvalue) or
@@ -266,7 +266,7 @@ class Signature(object):
             plu1 = "argument" if num_pos_args == 1 else "arguments"
             s += "takes %d positional %s but %d were given" % \
                  (num_pos_args, plu1, num_args)
-        return self._tc.TypeError(s)
+        return self._type_error(s)
 
 
     def _too_few_args_error(self, missing_args, argtype):
@@ -280,19 +280,26 @@ class Signature(object):
         else:
             s += ": " + ", ".join("`%s`" % a for a in missing_args[:-1]) + \
                  " and `%s`" % missing_args[-1]
-        return self._tc.TypeError(s)
+        return self._type_error(s)
 
 
     def _repeating_arg_error(self, arg):
         s = self.name_bt + " got multiple values for argument `%s`" % arg
-        return self._tc.TypeError(s)
+        return self._type_error(s)
 
 
     def _param_type_error(self, param, argname, argvalue):
         paramname = "Vararg parameter" if param.kind == "VAR_POSITIONAL" else \
                     "Parameter `%s`" % argname
         msg = param.checker.get_error_msg(paramname, argvalue)
-        return self._tc.TypeError(msg)
+        return self._type_error(msg)
+
+
+    def _type_error(self, msg):
+        if self._tc.supply_src:
+            return self._tc.TypeError(msg, src=self)
+        else:
+            return self._tc.TypeError(msg)
 
 
     def __repr__(self):
@@ -305,6 +312,17 @@ class Signature(object):
                  self._num_self_args,
                  ", ".join(self._required_kwonly_args),
                  ", ".join(repr(p) for p in self.params)))
+
+    def source(self):
+        args = []
+        if self._num_self_args:
+            args.append("self")
+        for p in self.params:
+            if p.has_default:
+                args.append(p.name + "=" + repr(p.default))
+            else:
+                args.append(p.name)
+        return "%s(%s)" % (self.function.__name__, ", ".join(args))
 
 
 # ------------------------------------------------------------------------------
@@ -334,6 +352,8 @@ class Parameter(object):
         self.name = name
         if kind == "VAR_POSITIONAL":
             self.name = "*" + name
+        if kind == "VAR_KEYWORD":
+            self.name = "**" + name
 
 
     @property

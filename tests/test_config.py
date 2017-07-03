@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 from __future__ import division, print_function
+import sys
 from tests import typesentry
+import pytest
 
 
 def test_reporting():
@@ -19,19 +21,19 @@ def test_reporting():
         assert False, "Expected a failure above"
     except TE as e:
         assert str(type(e)) == "<class 'typesentry.config.TypeError'>"
-        e._handle_()
+        e._handle_(*sys.exc_info())
 
     try:
         raise VE("bad value")
         assert False, "Expected a failure above"
     except VE as e:
         assert str(type(e)) == "<class 'typesentry.config.ValueError'>"
-        e._handle_()
+        e._handle_(*sys.exc_info())
 
 
 def test_custom_exceptions():
     class CustomError(TypeError):
-        def _handle_(self):
+        def _handle_(self, *args):
             pass
 
     conf = typesentry.Config(type_error=CustomError, value_error=CustomError,
@@ -46,6 +48,11 @@ def test_custom_exceptions():
         assert False, "Expected a failure"
     except CustomError as e:
         e._handle_()
+
+    with pytest.raises(RuntimeError) as e:
+        typesentry.Config(type_error=CustomError)
+    assert (str(e.value) == "Class CustomError must take parameter `src` when "
+                            "soft exceptions are used")
 
 
 def test_disabled():

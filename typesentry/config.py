@@ -4,6 +4,7 @@ from __future__ import division, print_function
 import functools
 import re
 import sys
+import traceback
 
 import colorama
 
@@ -16,14 +17,19 @@ __all__ = ("Config", )
 
 # Derive from the builtin TypeError
 class TsTypeError(TypeError):
-    def _handle_(self):
-        _handle_tc_error(self)
+    def __init__(self, msg, src=None):
+        super(TypeError, self).__init__(msg)
+        assert src is None or isinstance(src, Signature)
+        self.src = src
+
+    def _handle_(self, exc_type, exc_value, exc_tb):
+        _handle_tc_error(self, exc_type, exc_value, exc_tb)
 
 
 # Derive from the builtin ValueError
 class TsValueError(ValueError):
-    def _handle_(self):
-        _handle_tc_error(self)
+    def _handle_(self, exc_type, exc_value, exc_tb):
+        _handle_tc_error(self, exc_type, exc_value, exc_tb)
 
 
 TsTypeError.__name__ = "TypeError"
@@ -66,11 +72,22 @@ class Config(object):
         self.TypeError = type_error
         self.ValueError = value_error
         self.typed = self._make_typed(disabled)
+        self.supply_src = False
         if soft_exceptions:
             assert callable(getattr(type_error, "_handle_")), \
                 "Class %s missing method ._handle_()" % type_error.__name__
             assert callable(getattr(value_error, "_handle_")), \
                 "Class %s missing method ._handle_()" % value_error.__name__
+            try:
+                s = Signature(func=traceback.print_tb, types=tuple(),
+                              typesentry_config=self)
+                type_error("test type_error", src=s)
+                self.supply_src = True
+            except TypeError as e:
+                print(e)
+                raise RuntimeError("Class %s must take parameter `src` when "
+                                   "soft exceptions are used"
+                                   % type_error.__name__)
             self._install_exception_hooks()
 
 
@@ -103,7 +120,7 @@ class Config(object):
         # the Python's console
         def except_hook(exc_type, exc_value, exc_tb):  # pragma: no cover
             if hasattr(exc_value, "_handle_"):
-                exc_value._handle_()
+                exc_value._handle_(exc_type, exc_value, exc_tb)
             else:
                 previous_except_hook(exc_type, exc_value, exc_tb)
 
@@ -148,13 +165,42 @@ class Config(object):
 
 
 
-def _handle_tc_error(exc):
+def _handle_tc_error(exc, exc_type, exc_value, exc_tb):
     white = colorama.Fore.WHITE + colorama.Style.BRIGHT
     darkred = colorama.Fore.RED
     red = colorama.Fore.LIGHTRED_EX + colorama.Style.NORMAL
+    grey = colorama.Fore.WHITE + colorama.Style.DIM
+    lgrey = colorama.Fore.LIGHTBLACK_EX
     reset = colorama.Style.RESET_ALL
 
     msg = darkred + exc.__class__.__name__ + ": " + red + \
         re.sub(r"`([^`]*)`", white + "\\1" + red, str(exc)) + \
         "\n" + reset
+    indent = " " * (len(exc.__class__.__name__) + 2)
+    if hasattr(exc, "src") and exc.src is not None:
+        signature = exc.src
+        filename = signature.function.__code__.co_filename
+        lineno = signature.function.__code__.co_firstlineno
+        msg += indent + grey + "File %s, line %d, in \n" % (filename, lineno)
+        msg += indent + reset + lgrey + "     " + signature.source()
+
     print(msg, file=sys.stderr)
+
+    # Append the traceback
+    print(reset + grey, end="")
+    for frame in traceback.extract_tb(exc_tb):
+        # 'filename', 'line', 'lineno', 'locals', 'name'
+        if isinstance(frame, tuple):
+            filename, lineno, fnname, line = frame
+        else:
+            filename = frame.filename
+            lineno = frame.lineno
+            fnname = frame.name
+            line = frame.line
+        if filename.endswith("typesentry/config.py"):
+            break
+        print(indent + "File %s, line %d, in %s()"
+              % (filename, lineno, fnname))
+        print(indent + "     " + line)
+
+    print(reset)
