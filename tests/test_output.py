@@ -1,10 +1,40 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 from __future__ import division, print_function
-from tests import typed, TTypeError, U, py3only, nth_str
+from tests import typed, TTypeError, U, py3only, nth_str, PY3
 import random
 import sys
 import pytest
+
+if PY3:
+    from io import StringIO
+else:
+    from cStringIO import StringIO
+
+class CaptureIO(str):
+    """
+    Context manager for capturing output from stdout/stderr
+    """
+    def __enter__(self):
+        self._result = (None, None)
+        self._stdout = sys.stdout
+        self._stderr = sys.stderr
+        self._iostdout = StringIO()
+        self._iostderr = StringIO()
+        sys.stdout = self._iostdout
+        sys.stderr = self._iostderr
+        return self
+
+    def __exit__(self, *args):
+        self._result = (self._iostdout.getvalue(),
+                        self._iostderr.getvalue())
+        del self._iostdout
+        del self._iostderr
+        sys.stdout = self._stdout
+        sys.stderr = self._stderr
+
+    def result(self):
+        return self._result
 
 
 def assert_error(fn_or_type, argvalue, errormsg):
@@ -224,3 +254,50 @@ def test_nth_str():
     assert nth_str(122) == "122nd"
     assert nth_str(123) == "123rd"
     assert nth_str(1000) == "1000th"
+
+@pytest.mark.skip()
+def test_tb1():
+    @typed(x=int, y=U([int], [str]))
+    def important(x, y, *others):
+        return True
+
+    try:
+        important(8, "bar", "not", "me")
+    except TTypeError as e:
+        with CaptureIO() as output:
+            e._handle_(*sys.exc_info())
+        out, err = output.result()
+        assert not out
+        assert "important(x, y, *others)" in err
+
+@pytest.mark.skip()
+def test_tb2():
+    @typed(x=int, y=U([int], [str]))
+    def otherwise(x=0, y=None, *otherargs, **kws):
+        return True
+
+    try:
+        otherwise(8, "bar", "not", "me")
+    except TTypeError as e:
+        with CaptureIO() as output:
+            e._handle_(*sys.exc_info())
+        out, err = output.result()
+        assert not out
+        assert "otherwise(x=0, y=None, *otherargs, **kws)" in err
+
+
+def test_tb3():
+    class A(object):
+        @typed(once=bool, twice=str, thrice=U(str, [str]))
+        def attempt(self, once, twice="Yes", thrice="Nay"):
+            return True
+
+    try:
+        A().attempt(True, "1", .5)
+        assert False
+    except TTypeError as e:
+        with CaptureIO() as output:
+            e._handle_(*sys.exc_info())
+        out, err = output.result()
+        assert not out
+        assert "attempt(self, once, twice='Yes', thrice='Nay')" in err

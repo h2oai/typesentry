@@ -315,8 +315,6 @@ class Signature(object):
 
     def source(self):
         args = []
-        if self._num_self_args:
-            args.append("self")
         for p in self.params:
             if p.has_default:
                 args.append(p.name + "=" + repr(p.default))

@@ -182,12 +182,11 @@ def _handle_tc_error(exc, exc_type, exc_value, exc_tb):
         filename = signature.function.__code__.co_filename
         lineno = signature.function.__code__.co_firstlineno
         msg += indent + grey + "File %s, line %d, in \n" % (filename, lineno)
-        msg += indent + reset + lgrey + "     " + signature.source()
+        msg += "%s     %s\n" % (indent + reset + lgrey, signature.source())
 
-    print(msg, file=sys.stderr)
 
     # Append the traceback
-    print(reset + grey, end="")
+    msg += reset + grey
     for frame in traceback.extract_tb(exc_tb):
         # 'filename', 'line', 'lineno', 'locals', 'name'
         if isinstance(frame, tuple):
@@ -199,8 +198,9 @@ def _handle_tc_error(exc, exc_type, exc_value, exc_tb):
             line = frame.line
         if filename.endswith("typesentry/config.py"):
             break
-        print(indent + "File %s, line %d, in %s()"
-              % (filename, lineno, fnname))
-        print(indent + "     " + line)
+        msg += ("%sFile %s, line %d, in %s()\n"
+                % (indent, filename, lineno, fnname))
+        msg += "%s     %s\n" % (indent, line)
 
-    print(reset)
+    msg += reset
+    print(msg, file=sys.stderr)
