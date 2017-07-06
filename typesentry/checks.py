@@ -102,7 +102,8 @@ def _create_checker_for_type(t):
                     return MtSet(itemtype)
                 else:
                     return MtClass(set, name="Set")
-            if issubclass(t, typing.Callable) and t is not type:
+            if issubclass(t, typing.Callable) and \
+                    str(t).startswith("typing.Callable"):
                 return MtCallable(t.__args__)
             # This is somewhat ugly, but I do not know a better way to check
             # that something is constructed from Type.

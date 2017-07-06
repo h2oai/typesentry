@@ -240,6 +240,14 @@ def test_bad_uses():
 @py3only
 def test_callable():
     from typing import Callable
+
+    class Aaa(object):
+        def __call__(self):
+            pass
+
+    class Bbb(object):
+        pass
+
     assert is_type(test_callable, Callable)
     assert is_type(test_callable, Callable[..., None])
     assert is_type(test_callable, Callable[[], None])
@@ -247,6 +255,14 @@ def test_callable():
     assert is_type(lambda x, y: x * y, Callable[[int, float], float])
     assert is_type(lambda x, y, z: x * y / z,
                    Callable[[int, float, float], float])
+    assert is_type(type, Callable)
+    assert is_type(int, Callable)
+    assert is_type(Aaa, Callable)
+    assert is_type(Bbb, Callable)
+    assert is_type(Aaa(), Callable)
+    assert is_type(Aaa(), Aaa)  # see issue #6
+    assert is_type(Bbb(), Bbb)
     assert not is_type(1, Callable)
     assert not is_type("print", Callable)
     assert not is_type(lambda x: x, Callable[[int, int], None])
+    assert not is_type(Bbb(), Callable)
