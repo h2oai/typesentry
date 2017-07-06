@@ -80,3 +80,13 @@ def test_typing():
     assert name_type(Tuple[int, str, List]) == "Tuple[int, str, List]"
     assert name_type(Tuple[int, Ellipsis]) == "Tuple[int, ...]"
     assert name_type(Tuple[str, Ellipsis]) == "Tuple[str, ...]"
+
+
+@py3only
+def test_callable():
+    from typing import Callable, Union
+    assert name_type(Callable) == "Callable"
+    assert name_type(Callable[Ellipsis, int]) == "Callable[..., int]"
+    assert name_type(Callable[[str], int]) == "Callable[[str], int]"
+    assert name_type(Callable[[int, bool, str], float]) \
+        == "Callable[[int, bool, str], float]"

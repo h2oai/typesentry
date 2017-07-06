@@ -235,3 +235,18 @@ def test_bad_uses():
         assert is_type(1, I(int))
     assert ("More than one type is expected for Intersection constructor"
             in str(e.value))
+
+
+@py3only
+def test_callable():
+    from typing import Callable
+    assert is_type(test_callable, Callable)
+    assert is_type(test_callable, Callable[..., None])
+    assert is_type(test_callable, Callable[[], None])
+    assert is_type(lambda x: x * 2, Callable[[int], int])
+    assert is_type(lambda x, y: x * y, Callable[[int, float], float])
+    assert is_type(lambda x, y, z: x * y / z,
+                   Callable[[int, float, float], float])
+    assert not is_type(1, Callable)
+    assert not is_type("print", Callable)
+    assert not is_type(lambda x: x, Callable[[int, int], None])

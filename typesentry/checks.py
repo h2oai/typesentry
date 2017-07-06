@@ -102,6 +102,8 @@ def _create_checker_for_type(t):
                     return MtSet(itemtype)
                 else:
                     return MtClass(set, name="Set")
+            if issubclass(t, typing.Callable) and t is not type:
+                return MtCallable(t.__args__)
             # This is somewhat ugly, but I do not know a better way to check
             # that something is constructed from Type.
             if str(t) == "typing.Type" or str(t).startswith("typing.Type["):
@@ -574,6 +576,28 @@ class MtType(MagicType):
                        self._cls.__name__))
         else:
             return super(MtType, self).get_error_msg(paramname, value)
+
+
+class MtCallable(MagicType):
+    def __init__(self, args):
+        self._args = args
+
+    def check(self, val):
+        return callable(val) and (self._args is None or
+                                  self._args[0] is Ellipsis or
+                                  len(self._args) - 1 ==
+                                  val.__code__.co_argcount)
+
+    def name(self):
+        if self._args is None:
+            return "Callable"
+        elif self._args[0] is Ellipsis:
+            return "Callable[..., %s]" % checker_for_type(self._args[1]).name()
+        else:
+            return "Callable[[%s], %s]" % (
+                ", ".join(checker_for_type(z).name() for z in self._args[:-1]),
+                checker_for_type(self._args[-1]).name())
+
 
 
 # ------------------------------------------------------------------------------
