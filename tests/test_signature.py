@@ -4,6 +4,10 @@ import pytest
 import time
 from tests import typed, py3only, TTypeError
 
+# Stub
+def foo():
+    return False
+
 
 def test_func_0args0kws():
     @typed()
@@ -102,10 +106,11 @@ def test_func_3args0kws():
                             "of type list")
 
 
+@py3only
 def test_func_1varg1kw():
-    @typed(nums=int, force=bool)
-    def foo(*nums, force=False):
-        return True
+    exec("@typed(nums=int, force=bool)\n"
+         "def foo(*nums, force=False):\n"
+         "    return True\n", locals(), globals())
 
     assert foo()
     assert foo(1, 2, 5)
