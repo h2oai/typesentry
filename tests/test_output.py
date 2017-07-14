@@ -255,7 +255,7 @@ def test_nth_str():
     assert nth_str(123) == "123rd"
     assert nth_str(1000) == "1000th"
 
-@pytest.mark.skip()
+
 def test_tb1():
     @typed(x=int, y=U([int], [str]))
     def important(x, y, *others):
@@ -270,7 +270,7 @@ def test_tb1():
         assert not out
         assert "important(x, y, *others)" in err
 
-@pytest.mark.skip()
+
 def test_tb2():
     @typed(x=int, y=U([int], [str]))
     def otherwise(x=0, y=None, *otherargs, **kws):
