@@ -101,6 +101,24 @@ def test_func_3args0kws():
     assert str(e.value) == ("Parameter `x` of type `int` received value [3] "
                             "of type list")
 
+
+def test_func_1varg1kw():
+    @typed(nums=int, force=bool)
+    def foo(*nums, force=False):
+        return True
+
+    assert foo()
+    assert foo(1, 2, 5)
+    assert foo(force=False)
+    assert foo(-1, 7, force=True)
+
+    with pytest.raises(TTypeError) as e:
+        foo(1, 10, 100, True)
+    assert str(e.value) == "Vararg parameter of type `int` received " \
+                           "value True"
+
+
+
 def test_func_varargs():
     @typed(args=int)
     def foo(*args):

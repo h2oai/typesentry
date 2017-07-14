@@ -193,6 +193,7 @@ class Signature(object):
         def _checker(*args, **kws):
             # Check if too many arguments are provided
             nargs = len(args)
+            nnonvaargs = min(nargs, self._max_positional_args)
             if nargs > self._max_positional_args and self._ivararg is None:
                 raise self._too_many_args_error(nargs)
 
@@ -228,7 +229,7 @@ class Signature(object):
             # Check types of keyword arguments
             for argname, argvalue in kws.items():
                 argindex = self._iargs.get(argname)
-                if argindex is not None and argindex < nargs:
+                if argindex is not None and argindex < nnonvaargs:
                     raise self._repeating_arg_error(argname)
                 index = self._iargs.get(argname)
                 if index is None:
