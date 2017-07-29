@@ -21,7 +21,7 @@ else:
 
 try:
     import typing
-    need_to_fix_typing = hasattr(typing.Union[int], "__union_params__")
+    need_to_fix_typing = hasattr(typing.Union[str, int], "__union_params__")
 except ImportError:  # pragma: no cover
     typing = None
     need_to_fix_typing = False
@@ -61,13 +61,19 @@ def checker_for_type(t):
 
 
 def _create_checker_for_type(t):
-    if need_to_fix_typing:  # pragma: no cover
+    if need_to_fix_typing:
         if hasattr(t, "__union_params__"):
             t.__args__ = t.__union_params__
         if hasattr(t, "__tuple_params__"):
             t.__args__ = t.__tuple_params__
             if t.__tuple_use_ellipsis__:
                 t.__args__ += (Ellipsis, )
+        if hasattr(t, "__result__") and t.__args__ is not None:
+            if isinstance(t.__args__, tuple):
+                t.__args__ += (t.__result__, )
+            else:
+                t.__args__ = (t.__args__, t.__result__)
+            t.__result__ = 0  # Invalidate t.__result__
     if isinstance(t, _primitive_type):
         return MtLiteral(t)
     if isinstance(t, MagicType):
@@ -76,6 +82,10 @@ def _create_checker_for_type(t):
         if issubclass(t, MagicType):
             return t()
         if typing:
+            if t is typing.Any:  # under Py3.5 only
+                return MtAny()
+            if type(t) is type(typing.Union):  # under Py3.5 only
+                return MtUnion(*t.__args__)
             if issubclass(t, typing.List) and t is not list:
                 itemtype = t.__args__ and t.__args__[0]
                 if itemtype and itemtype is not typing.Any:
@@ -105,9 +115,8 @@ def _create_checker_for_type(t):
             if issubclass(t, typing.Callable) and \
                     str(t).startswith("typing.Callable"):
                 return MtCallable(t.__args__)
-            # This is somewhat ugly, but I do not know a better way to check
-            # that something is constructed from Type.
-            if str(t) == "typing.Type" or str(t).startswith("typing.Type["):
+            if (t is typing.Type or t.__base__ is typing.Type or
+                   getattr(t, "__origin__", None) is typing.Type):
                 cls = t.__args__ and t.__args__[0]
                 if cls and cls is not typing.Any:
                     return MtType(cls)
