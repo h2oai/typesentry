@@ -249,7 +249,8 @@ See Also
 - `PEP 484 <https://www.python.org/dev/peps/pep-0484/>`_ — Python standard for
   declaring type annotations.
 - `MyPy <http://mypy-lang.org/>`_ — static type analyzer (i.e. at compile time).
-- `TypeGuard <https://github.com/agronholm/typeguard>`_ — alternative runtime
+- `typeguard <https://github.com/agronholm/typeguard>`_ — alternative runtime
   type checker.
-- `Enforce <https://github.com/RussBaz/enforce>`_ — another runtime type
+- `enforce <https://github.com/RussBaz/enforce>`_ — another runtime type
   checker.
+- `runtime_typecheck <https://github.com/jacopofar/runtime_typecheck>`_ — yet another one.
