@@ -176,13 +176,15 @@ def _handle_tc_error(exc, exc_type, exc_value, exc_tb):
     msg = darkred + exc.__class__.__name__ + ": " + red + \
         re.sub(r"`([^`]*)`", white + "\\1" + red, str(exc)) + \
         "\n" + reset
-    indent = " " * (len(exc.__class__.__name__) + 2)
     if hasattr(exc, "src") and exc.src is not None:
         signature = exc.src
         filename = signature.function.__code__.co_filename
         lineno = signature.function.__code__.co_firstlineno
-        msg += indent + grey + "File %s, line %d, in \n" % (filename, lineno)
-        msg += "%s     %s\n" % (indent + reset + lgrey, signature.source())
+        line = signature.source()
+        if filename != "<stdin>" or line:
+            msg += grey
+            msg += "    File %s, line %d, in \n" % (filename, lineno)
+            msg += "         %s%s%s\n" % (reset, lgrey, line)
 
 
     # Append the traceback
@@ -198,9 +200,11 @@ def _handle_tc_error(exc, exc_type, exc_value, exc_tb):
             line = frame.line
         if filename.endswith("typesentry/config.py"):
             break
-        msg += ("%sFile %s, line %d, in %s()\n"
-                % (indent, filename, lineno, fnname))
-        msg += "%s     %s\n" % (indent, line)
+        if filename == "<stdin>" and fnname == "<module>":
+            continue
+        msg += "    File %s, line %d, in %s()\n" % (filename, lineno, fnname)
+        if line:
+            msg += "         %s\n" % (line)
 
     msg += reset
     print(msg, file=sys.stderr)
