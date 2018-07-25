@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Copyright 2017 H2O.ai; Apache License Version 2.0;  -*- encoding: utf-8 -*-
 import pytest
+import sys
 from tests import is_type, py3only, PY3, U, I, Not, MagicType
 
 
@@ -169,10 +170,11 @@ def test_Union():
     assert is_type([1, 0, "hi"], List[Union[str, int]])
     assert not is_type(Union, Union[str, int])
 
-    # In Python, bool is a subclass of int, and thus Union[bool, int] = int.
-    # However we make a distinction between booleans and integers, hence
-    # is_type(True, int) is False.
-    assert not is_type(True, Union[bool, int])
+    # In Python before 3.7, `Union[bool, int]` evaluates to `int` (before
+    # even reaching our module). However since 3.7 the types are not
+    # coalesced, and `Union[bool, int]` remains as-is.
+    if sys.version_info < (3, 7):
+        assert not is_type(True, Union[bool, int])
 
 
 @py3only

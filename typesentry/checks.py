@@ -7,6 +7,7 @@ import re
 
 
 PY2 = sys.version_info[0] == 2
+PY37 = sys.version_info >= (3, 7)
 
 if PY2:
     _str_type = (str, unicode)  # noqa
@@ -131,6 +132,53 @@ def _create_checker_for_type(t):
             return MtAny()
         if type(t) is type(typing.Union):  # flake8: disable=E721
             return MtUnion(*t.__args__)
+        # For Py3.7
+        if PY37 and getattr(t, "__module__", None) == "typing":
+            if t is typing.List:
+                return MtClass(list, name="List")
+            if t is typing.Tuple:
+                return MtClass(tuple, name="Tuple")
+            if t is typing.Dict:
+                return MtClass(dict, name="Dict")
+            if t is typing.Set:
+                return MtClass(set, name="Set")
+            if t is typing.Type:
+                return MtClass(type, name="Type")
+            if t is typing.Callable:
+                return MtCallable(None)
+            if t.__origin__ is typing.Union:
+                return MtUnion(*t.__args__)
+            if t.__origin__ is list:
+                itemtype = t.__args__[0]
+                if itemtype is typing.Any:
+                    return MtClass(list, name="List")
+                else:
+                    return MtList(itemtype)
+            if t.__origin__ is set:
+                itemtype = t.__args__[0]
+                if itemtype is typing.Any:
+                    return MtClass(set, name="Set")
+                else:
+                    return MtSet(itemtype)
+            if t.__origin__ is tuple:
+                if len(t.__args__) == 2 and t.__args__[1] is Ellipsis:
+                    return MtTuple0(t.__args__[0])
+                else:
+                    return MtTuple1(*t.__args__)
+            if t.__origin__ is dict:
+                key, value = t.__args__
+                if key is typing.Any and value is typing.Any:
+                    return MtClass(dict, name="Dict")
+                else:
+                    return MtDict0(key, value)
+            if t.__origin__ is type:
+                itemtype = t.__args__[0]
+                if itemtype is typing.Any:
+                    return MtClass(type, name="Type")
+                else:
+                    return MtType(itemtype)
+            if t.__origin__ is typing.Callable.__origin__:
+                return MtCallable(t.__args__)
     if isinstance(t, list):
         # `t` is a list literal, such as [int, str]
         assert len(t)
