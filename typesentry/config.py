@@ -37,6 +37,14 @@ TsTypeError.__qualname__ = "TypeError"
 TsValueError.__name__ = "ValueError"
 TsValueError.__qualname__ = "ValueError"
 
+# This value will be captured when we try to install our own except hook
+system_except_hook = None
+
+# This function cannot be tested, becauses it can only be executed by
+# the Python's console
+def typesentry_except_hook(exc_type, exc_value, exc_tb):  # pragma: no cover
+    handler = getattr(exc_value, "_handle_", system_except_hook)
+    handler(exc_type, exc_value, exc_tb)
 
 
 class Config(object):
@@ -74,6 +82,7 @@ class Config(object):
         self.typed = self._make_typed(disabled)
         self.supply_src = False
         if soft_exceptions:
+            global system_except_hook
             assert callable(getattr(type_error, "_handle_")), \
                 "Class %s missing method ._handle_()" % type_error.__name__
             assert callable(getattr(value_error, "_handle_")), \
@@ -88,7 +97,10 @@ class Config(object):
                 raise RuntimeError("Class %s must take parameter `src` when "
                                    "soft exceptions are used"
                                    % type_error.__name__)
-            self._install_exception_hooks()
+            # Make sure that we only ever attempt to set the excepthook once
+            if not system_except_hook:
+                system_except_hook = sys.excepthook
+                sys.excepthook = typesentry_except_hook
 
 
     @staticmethod
@@ -112,20 +124,6 @@ class Config(object):
     #---------------------------------------------------------------------------
     # Private
     #---------------------------------------------------------------------------
-
-    def _install_exception_hooks(self):
-        previous_except_hook = sys.excepthook
-
-        # This function cannot be tested, becauses it can only be executed by
-        # the Python's console
-        def except_hook(exc_type, exc_value, exc_tb):  # pragma: no cover
-            if hasattr(exc_value, "_handle_"):
-                exc_value._handle_(exc_type, exc_value, exc_tb)
-            else:
-                previous_except_hook(exc_type, exc_value, exc_tb)
-
-        sys.excepthook = except_hook
-
 
     def _make_typed(self, disabled):
         if disabled:
